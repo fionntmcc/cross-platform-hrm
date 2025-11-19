@@ -105,3 +105,38 @@ class LowLevelWorker4x4(nn.Module):
         }
         
         return state, metrics
+
+
+class ActionDecoder4x4(nn.Module):
+    """Decoder - converts refined state to action (cell + digit)"""
+    
+    def __init__(self, abstract_dim: int = 64):
+        super().__init__()
+        
+        # Predict which cell to fill
+        self.cell_head = nn.Sequential(
+            nn.Linear(abstract_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 16)
+        )
+        
+        # Predict which digit (1-4)
+        self.digit_head = nn.Sequential(
+            nn.Linear(abstract_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 4)
+        )
+    
+    def forward(self, refined_state: torch.Tensor) -> tuple:
+        """
+        Args:
+            refined_state: (batch, abstract_dim)
+        Returns:
+            cell_logits: (batch, 16) unnormalized scores for each cell
+            digit_logits: (batch, 4) unnormalized scores for each digit
+        """
+        # Get logits for both cell and digit -> simple version that only gets 1 cell at a time
+        cell_logits = self.cell_head(refined_state)
+        digit_logits = self.digit_head(refined_state)
+        
+        return cell_logits, digit_logits

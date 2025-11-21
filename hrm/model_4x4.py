@@ -29,3 +29,34 @@ class HRM_4x4(nn.Module):
             nn.Linear(hidden_dim, hidden_dim)
         )
         
+        # Decoder: predict cell and digit
+        self.cell_decoder = nn.Linear(hidden_dim, 16)   # 16 cells
+        self.digit_decoder = nn.Linear(hidden_dim, 4)   # 4 digits
+
+        
+    def forward(self, puzzle: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass of the HRM model for 4x4 Sudoku.
+        Args:
+            puzzle: (batch, 4, 4) integers 0-4
+        Returns:
+            cell_logits: (batch, 16) 
+            digit_logits: (batch, 4)
+        """
+        batch_size = puzzle.shape[0]
+        
+        # Get embeddings and flatten them
+        x = self.embed(puzzle).view(batch_size, -1)
+        
+        # H-module
+        abstract = self.planner(x)
+        
+        # L-module
+        refined = self.worker(abstract)
+        
+        # Decode actions
+        cell_logits = self.cell_decoder(refined)
+        digit_logits = self.digit_decoder(refined)
+        
+        # return cell and value
+        return cell_logits, digit_logits

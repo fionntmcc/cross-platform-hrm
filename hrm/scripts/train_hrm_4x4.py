@@ -6,10 +6,13 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 import json
+import sys
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from generators.generator_4x4 import generate_dataset, print_puzzle
-from models.model_4x4 import HRM_4x4 
+from models.model_4x4_layers import HRM_4x4 
 
 
 class Dataset_4x4(Dataset):
@@ -39,7 +42,8 @@ class Dataset_4x4(Dataset):
 def train_model(num_epochs: int = 20, 
                 train_size: int = 1000,
                 hidden_dim: int = 64,
-                max_iterations: int = 10,
+                n_outer_cycles: int = 5,
+                n_inner_steps: int = 10,
                 halt_weight: float = 0.1):
     """
     Train the HRM 4x4 solver
@@ -48,7 +52,8 @@ def train_model(num_epochs: int = 20,
         num_epochs: Number of training epochs
         train_size: Number of training puzzles
         hidden_dim: Hidden dimension size
-        max_iterations: Maximum Worker iterations
+        n_outer_cycles: Number of outer planning cycles
+        n_inner_steps: Number of inner worker steps per cycle
         halt_weight: Weight for halting penalty
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -66,11 +71,15 @@ def train_model(num_epochs: int = 20,
     val_loader = DataLoader(val_data, batch_size=32)
     
     # Create HRM model
-    model = HRM_4x4(hidden_dim=hidden_dim).to(device)
+    model = HRM_4x4(
+        hidden_dim=hidden_dim,
+        n_outer_cycles=n_outer_cycles,
+        n_inner_steps=n_inner_steps
+    ).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
-    print(f"Max iterations: {max_iterations}\n")
+    print(f"Max iterations: {n_outer_cycles * n_inner_steps}\n")
     
     best_acc = 0
     Path('model').mkdir(exist_ok=True)
@@ -102,14 +111,14 @@ def train_model(num_epochs: int = 20,
             optimizer.zero_grad()
             
             # Forward pass with HRM
-            cell_logits, digit_logits, traces = model(puzzles, return_traces=False)
+            cell_logits, digit_logits, traces = model(puzzles, return_traces=True)
             
             # Task loss: predict correct cell and digit
             task_loss = (nn.functional.cross_entropy(cell_logits, cells) + 
                         2.0 * nn.functional.cross_entropy(digit_logits, digits))
             
             # Halting penalty: encourage efficient iteration count
-            halt_penalty = model.get_halt_penalty(traces, target_iterations=5)
+            halt_penalty = model.get_halt_penalty(traces, target_iterations=n_outer_cycles * n_inner_steps)
             
             # Total loss
             loss = task_loss + halt_weight * halt_penalty
@@ -196,7 +205,7 @@ def test_model():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Load model
-    model = HRM_4x4(hidden_dim=64, max_iterations=10).to(device)
+    model = HRM_4x4(hidden_dim=64, n_outer_cycles=5, n_inner_steps=10).to(device)
     model.load_state_dict(torch.load('model/hrm_4x4.pt', map_location=device))
     model.eval()
     
@@ -256,9 +265,10 @@ if __name__ == "__main__":
     
     model = train_model(
         num_epochs=20, 
-        train_size=100,
+        train_size=1000,
         hidden_dim=64,
-        max_iterations=10,
+        n_outer_cycles=5,
+        n_inner_steps=10,
         halt_weight=0.1
     )
     

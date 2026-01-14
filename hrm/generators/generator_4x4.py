@@ -68,13 +68,13 @@ def is_valid(board: np.ndarray, row: int, col: int, digit: int) -> bool:
     return True
 
 def print_puzzle(puzzle: np.ndarray, title: str = "Puzzle"):
-    """Print puzzle to console
+    """Print puzzle to console with proper 2x2 box borders
     Args:
         puzzle: (4, 4) array
         title: Title to display
     """
     print(f"\n{title}:")
-    print("┌───────┐")
+    print("┌─────┬─────┐")
     for i in range(4):
         row_str = "│ "
         for j in range(4):
@@ -83,8 +83,8 @@ def print_puzzle(puzzle: np.ndarray, title: str = "Puzzle"):
         row_str += "│"
         print(row_str)
         if i == 1:
-            print("├───────┤")
-    print("└───────┘")
+            print("├─────┼─────┤")
+    print("└─────┴─────┘")
 
 
 def generate_dataset(size: int, num_clues: int = 10) -> Tuple[np.ndarray, np.ndarray]:

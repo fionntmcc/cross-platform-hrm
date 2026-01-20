@@ -88,7 +88,8 @@ def generate_maze(width=30, height=30, min_path_length=50, seed=None):
     
     return maze, start_pos, exit_pos
 
-    def find_path_length(maze, start, end):
+
+def find_path_length(maze, start, end):
     """
     Find the shortest path length between start and end using BFS.
     Returns -1 if no path exists.
@@ -154,3 +155,104 @@ def place_start_exit(maze, width, height, min_path_length, passage_cells):
                 return exit_pos, start_pos
     
     return None, None
+
+
+def print_maze(maze):
+    """Print the maze in a readable format."""
+    size = maze.shape[0]
+    
+    print("\nMaze Legend: -1=Wall, 0=Exit, -2=Start, other=distance from exit")
+    print("-" * (size * 4 + 1))
+    
+    for row in maze:
+        print("|", end="")
+        for cell in row:
+            if cell == -1:
+                print(" ██", end="|")
+            elif cell == -2:
+                print(" S ", end="|")
+            elif cell == 0:
+                print(" E ", end="|")
+            else:
+                print(f"{cell:3}", end="|")
+        print()
+    print("-" * (size * 4 + 1))
+
+
+def print_maze_compact(maze):
+    """Print a more compact visual representation."""
+    print("\nCompact view (█=wall, S=start, E=exit, ·=path):")
+    for row in maze:
+        for cell in row:
+            if cell == -1:
+                print("██", end="")
+            elif cell == -2:
+                print("S ", end="")
+            elif cell == 0:
+                print("E ", end="")
+            else:
+                print("· ", end="")
+        print()
+
+
+def get_maze_stats(maze, start_pos, exit_pos):
+    """Get statistics about the generated maze."""
+    height, width = maze.shape
+    total_cells = height * width
+    wall_cells = np.sum(maze == -1)
+    passage_cells = total_cells - wall_cells
+    
+    path_length = find_path_length(maze, start_pos, exit_pos)
+    
+    return {
+        'width': width,
+        'height': height,
+        'total_cells': total_cells,
+        'wall_cells': wall_cells,
+        'passage_cells': passage_cells,
+        'wall_percentage': wall_cells / total_cells * 100,
+        'path_length': path_length,
+        'start_pos': start_pos,
+        'exit_pos': exit_pos
+    }
+
+
+if __name__ == "__main__":
+    # Parameters
+    MAZE_WIDTH = 30   # Number of columns
+    MAZE_HEIGHT = 30  # Number of rows
+    MIN_PATH_LENGTH = 50  # Minimum cells to travel from start to exit
+    SEED = 42  # For reproducibility
+    
+    print(f"Generating {MAZE_WIDTH}x{MAZE_HEIGHT} maze...")
+    print(f"Minimum path length: {MIN_PATH_LENGTH}")
+    print(f"Seed: {SEED}")
+    
+    # Generate maze
+    maze, start_pos, exit_pos = generate_maze(
+        width=MAZE_WIDTH,
+        height=MAZE_HEIGHT,
+        min_path_length=MIN_PATH_LENGTH,
+        seed=SEED
+    )
+    
+    # Get and print statistics
+    stats = get_maze_stats(maze, start_pos, exit_pos)
+    print(f"\nMaze Statistics:")
+    print(f"  Dimensions: {stats['width']}x{stats['height']}")
+    print(f"  Wall cells: {stats['wall_cells']} ({stats['wall_percentage']:.1f}%)")
+    print(f"  Passage cells: {stats['passage_cells']}")
+    print(f"  Start position: {stats['start_pos']}")
+    print(f"  Exit position: {stats['exit_pos']}")
+    print(f"  Actual path length: {stats['path_length']}")
+    
+    # Print compact visualization
+    print_maze_compact(maze)
+    
+    # Print raw matrix
+    print("\nRaw maze matrix:")
+    print(maze)
+    
+    # Save to file
+    np.savetxt('/home/claude/maze_output.txt', maze, fmt='%3d')
+    print("\nMaze saved to maze_output.txt")

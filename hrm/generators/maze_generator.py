@@ -1,6 +1,6 @@
 """
 Maze Generator
-Generates 30x30 maze puzzles with:
+Generates NxN maze puzzles with:
 - Obstructions: -1
 - Exit: 0
 - Start: -2
@@ -10,6 +10,8 @@ Generates 30x30 maze puzzles with:
 import random
 from collections import deque
 import numpy as np
+import argparse
+import os
 
 
 def generate_maze(width=30, height=30, min_path_length=50, seed=None):
@@ -252,7 +254,209 @@ if __name__ == "__main__":
     # Print raw matrix
     print("\nRaw maze matrix:")
     print(maze)
+
+
+def generate_dataset(n_mazes, width, height, min_path_length, seed=None):
+    """
+    Generate a dataset of mazes.
     
-    # Save to file
-    np.savetxt('/home/claude/maze_output.txt', maze, fmt='%3d')
-    print("\nMaze saved to maze_output.txt")
+    Args:
+        n_mazes: Number of mazes to generate
+        width: Width of each maze
+        height: Height of each maze
+        min_path_length: Minimum path length for each maze
+        seed: Random seed for reproducibility
+        
+    Returns:
+        Tuple of (problems_array, solutions_array) where each is shape (n_mazes, height, width)
+    """
+    problems = []
+    solutions = []
+    
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+    
+    for i in range(n_mazes):
+        if (i + 1) % max(1, n_mazes // 10) == 0:
+            print(f"  Generated {i + 1}/{n_mazes} mazes...")
+        
+        maze, start_pos, exit_pos = generate_maze(
+            width=width,
+            height=height,
+            min_path_length=min_path_length,
+            seed=None if seed is None else seed + i
+        )
+        
+        # Problem is the maze itself
+        problems.append(maze)
+        
+        # Solution is a binary map showing the shortest path
+        solution = np.zeros((height, width), dtype=int)
+        path = find_shortest_path(maze, start_pos, exit_pos)
+        if path:
+            for y, x in path:
+                solution[y, x] = 1
+        solutions.append(solution)
+    
+    return np.array(problems), np.array(solutions)
+
+
+def find_shortest_path(maze, start, end):
+    """
+    Find the shortest path from start to end using BFS.
+    Returns list of coordinates forming the path.
+    """
+    height, width = maze.shape
+    visited = {start: None}
+    queue = deque([start])
+    
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    
+    while queue:
+        current = queue.popleft()
+        
+        if current == end:
+            # Reconstruct path
+            path = []
+            node = current
+            while node is not None:
+                path.append(node)
+                node = visited[node]
+            return list(reversed(path))
+        
+        y, x = current
+        for dy, dx in directions:
+            ny, nx = y + dy, x + dx
+            if (0 <= ny < height and 0 <= nx < width and 
+                (ny, nx) not in visited and maze[ny, nx] != -1):
+                visited[(ny, nx)] = current
+                queue.append((ny, nx))
+    
+    return None
+
+
+def save_dataset(problems, solutions, output_prefix):
+    """
+    Save the dataset to files.
+    
+    Args:
+        problems: Numpy array of problem mazes
+        solutions: Numpy array of solution paths
+        output_prefix: Path prefix for output files (will add .npz extension)
+    """
+    # Create directory if it doesn't exist
+    output_dir = os.path.dirname(output_prefix)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Save as compressed npz
+    npz_path = f"{output_prefix}.npz"
+    np.savez_compressed(
+        npz_path,
+        problems=problems,
+        solutions=solutions
+    )
+    print(f"Saved to {npz_path}")
+    
+    # Also save as separate npy files for flexibility
+    problems_path = f"{output_prefix}_problems.npy"
+    solutions_path = f"{output_prefix}_solutions.npy"
+    np.save(problems_path, problems)
+    np.save(solutions_path, solutions)
+    print(f"Also saved to {problems_path} and {solutions_path}")
+
+
+def main():
+    """Main entry point with command-line interface."""
+    parser = argparse.ArgumentParser(
+        description='Generate maze datasets for neural network training',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate 1000 mazes and save to training_data.npz
+  python maze_generator.py -n 1000 -W 20 -H 20 -o training_data
+  
+  # Generate single maze with custom dimensions
+  python maze_generator.py -n 1 -W 40 -H 40 -s 42
+  
+  # Generate to specific output directory
+  python maze_generator.py -n 500 -W 30 -H 30 -o ../data/mazes
+        """
+    )
+    
+    parser.add_argument('-n', '--num', type=int, default=1,
+                        help='Number of mazes to generate (default: 1)')
+    
+    parser.add_argument('-W', '--width', type=int, default=30,
+                        help='Width of mazes (default: 30)')
+    
+    parser.add_argument('-H', '--height', type=int, default=30,
+                        help='Height of mazes (default: 30)')
+    
+    parser.add_argument('-m', '--min-path', type=int, default=50,
+                        help='Minimum path length (default: 50)')
+    
+    parser.add_argument('-s', '--seed', type=int, default=None,
+                        help='Random seed for reproducibility')
+    
+    parser.add_argument('-o', '--output', type=str, default='mazes',
+                        help='Output file prefix (default: mazes)')
+    
+    args = parser.parse_args()
+    
+    # Validate arguments
+    if args.num < 1:
+        print("Error: --num must be at least 1")
+        return
+    
+    if args.width < 5 or args.height < 5:
+        print("Error: Width and height must be at least 5")
+        return
+    
+    # Generate dataset
+    print(f"Generating {args.num} mazes ({args.width}x{args.height})...")
+    if args.seed is not None:
+        print(f"  Seed: {args.seed}")
+    
+    problems, solutions = generate_dataset(
+        n_mazes=args.num,
+        width=args.width,
+        height=args.height,
+        min_path_length=args.min_path,
+        seed=args.seed
+    )
+    
+    # Print statistics
+    print(f"\n{'='*60}")
+    print(f"DATASET GENERATED")
+    print(f"{'='*60}")
+    print(f"Total mazes: {args.num}")
+    print(f"Maze dimensions: {args.width}x{args.height}")
+    print(f"Problems shape: {problems.shape}")
+    print(f"Solutions shape: {solutions.shape}")
+    
+    # Save dataset
+    print(f"\n{'='*60}")
+    print(f"SAVING DATASET")
+    print(f"{'='*60}")
+    save_dataset(problems, solutions, args.output)
+    
+    print(f"\n{'='*60}")
+    print(f"USAGE IN TRAINING SCRIPT")
+    print(f"{'='*60}")
+    print(f"""
+# Load the dataset:
+data = np.load('{args.output}.npz')
+problems = data['problems']      # Shape: ({args.num}, {args.height}, {args.width})
+solutions = data['solutions']    # Shape: ({args.num}, {args.height}, {args.width})
+
+# For PyTorch (add channel dimension for CNN):
+problems = torch.from_numpy(problems[:, np.newaxis, :, :]).float()
+solutions = torch.from_numpy(solutions[:, np.newaxis, :, :]).float()
+    """)
+
+
+if __name__ == "__main__":
+    main()
+

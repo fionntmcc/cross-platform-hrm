@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from model_4x4 import HRM_4x4
+from models.model_4x4_layers import HRM_4x4
 from generators.generator_4x4 import generate_puzzle, print_puzzle
 
 
@@ -8,7 +8,7 @@ def demo():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Load model
-    model = HRM_4x4(hidden_dim=64).to(device)
+    model = HRM_4x4(hidden_dim=64, n_outer_cycles=5, n_inner_steps=10).to(device)
     
     try:
         model.load_state_dict(torch.load('model/hrm_4x4.pt', map_location=device))
@@ -30,7 +30,7 @@ def demo():
         puzzle_tensor = torch.from_numpy(puzzle).unsqueeze(0).long().to(device)
         
         with torch.no_grad():
-            cell_logits, digit_logits = model(puzzle_tensor)
+            cell_logits, digit_logits, traces = model(puzzle_tensor)
             
             cell_pred = torch.argmax(cell_logits[0]).item()
             digit_pred = torch.argmax(digit_logits[0]).item() + 1

@@ -87,3 +87,70 @@ def generate_maze(width=30, height=30, min_path_length=50, seed=None):
     maze[start_pos] = -2
     
     return maze, start_pos, exit_pos
+
+    def find_path_length(maze, start, end):
+    """
+    Find the shortest path length between start and end using BFS.
+    Returns -1 if no path exists.
+    """
+    height, width = maze.shape
+    visited = set()
+    queue = deque([(start, 0)])
+    visited.add(start)
+    
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    
+    while queue:
+        (y, x), dist = queue.popleft()
+        
+        if (y, x) == end:
+            return dist
+        
+        for dy, dx in directions:
+            ny, nx = y + dy, x + dx
+            if (0 <= ny < height and 0 <= nx < width and 
+                (ny, nx) not in visited and maze[ny, nx] != -1):
+                visited.add((ny, nx))
+                queue.append(((ny, nx), dist + 1))
+    
+    return -1
+
+
+def place_start_exit(maze, width, height, min_path_length, passage_cells):
+    """
+    Place start and exit positions ensuring minimum path length.
+    """
+    # Try multiple combinations to find valid start/exit positions
+    random.shuffle(passage_cells)
+    
+    # Prefer corners and edges for exit
+    corners_edges = [c for c in passage_cells if 
+                    c[0] <= 2 or c[0] >= height - 3 or c[1] <= 2 or c[1] >= width - 3]
+    
+    if corners_edges:
+        exit_candidates = corners_edges
+    else:
+        exit_candidates = passage_cells[:len(passage_cells)//2]
+    
+    for exit_pos in exit_candidates:
+        for start_pos in passage_cells:
+            if start_pos == exit_pos:
+                continue
+            
+            path_len = find_path_length(maze, start_pos, exit_pos)
+            
+            if path_len >= min_path_length:
+                return exit_pos, start_pos
+    
+    # If no valid placement found, try with any two distant points
+    for exit_pos in passage_cells:
+        for start_pos in reversed(passage_cells):
+            if start_pos == exit_pos:
+                continue
+            
+            path_len = find_path_length(maze, start_pos, exit_pos)
+            
+            if path_len >= min_path_length:
+                return exit_pos, start_pos
+    
+    return None, None

@@ -4,8 +4,6 @@ Cross-Platform Hierarchical Reasoning Model (HRM)
 A platform-agnostic implementation of the Hierarchical Reasoning Model
 for constraint-satisfaction problems, specifically Sudoku puzzle solving.
 
-Paper: "Hierarchical Reasoning Model" (https://arxiv.org/abs/2506.21734)
-
 Authors:
     - Fionn McCarthy (G00414386)
     - Kyrylo Kozlovskyi (G00425385)

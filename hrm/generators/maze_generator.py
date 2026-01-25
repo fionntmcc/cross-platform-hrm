@@ -1,5 +1,5 @@
 """
-Maze Generator for Neural Network Training
+Maze Generator for HRM Training
 Generates maze puzzles with solutions:
 - Obstructions: -1
 - Exit: 0

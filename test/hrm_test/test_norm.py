@@ -1,13 +1,12 @@
 """
 Unit Tests for RMSNorm Implementation
 
-Run with: pytest tests/test_norm.py -v
+Run with: pytest test/hrm_test/test_norm.py -v
 """
 
 import pytest
 import torch
 import torch.nn as nn
-import math
 
 # Import the module under test
 from hrm.layers.norm import RMSNorm

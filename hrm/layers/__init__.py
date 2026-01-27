@@ -10,10 +10,10 @@ This module contains all the building blocks for the Hierarchical Reasoning Mode
 """
 
 from hrm.layers.norm import RMSNorm, RMSNormWithBias, create_norm_layer
+from hrm.layers.worker import WorkerModule, WorkerModuleWithGating
 
 # These will be added as we implement each issue:
 # from hrm.layers.input_network import InputNetwork      # Issue #2
-# from hrm.layers.worker import WorkerModule            # Issue #3
 # from hrm.layers.planner import PlannerModule          # Issue #4
 # from hrm.layers.output_network import OutputNetwork   # Issue #5
 
@@ -25,7 +25,8 @@ __all__ = [
     # Issue #2
     # "InputNetwork",
     # Issue #3
-    # "WorkerModule",
+    "WorkerModule",
+    "WorkerModuleWithGating",
     # Issue #4
     # "PlannerModule",
     # Issue #5

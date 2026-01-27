@@ -10,12 +10,12 @@ This module contains all the building blocks for the Hierarchical Reasoning Mode
 """
 
 from hrm.layers.norm import RMSNorm, RMSNormWithBias, create_norm_layer
+from hrm.layers.input_network import InputNetwork, create_input_network
+# from hrm.layers.worker import WorkerModule, create_worker_module  # Issue #3 (Fionn)
+from hrm.layers.planner import PlannerModule, create_planner_module
 
-# These will be added as we implement each issue:
-# from hrm.layers.input_network import InputNetwork      # Issue #2
-# from hrm.layers.worker import WorkerModule            # Issue #3
-# from hrm.layers.planner import PlannerModule          # Issue #4
-# from hrm.layers.output_network import OutputNetwork   # Issue #5
+# Will be added as implemented:
+# from hrm.layers.output_network import OutputNetwork  # Issue #5
 
 __all__ = [
     # Issue #1
@@ -23,11 +23,14 @@ __all__ = [
     "RMSNormWithBias",
     "create_norm_layer",
     # Issue #2
-    # "InputNetwork",
-    # Issue #3
+    "InputNetwork",
+    "create_input_network",
+    # Issue #3 (Fionn working on this)
     # "WorkerModule",
+    # "create_worker_module",
     # Issue #4
-    # "PlannerModule",
+    "PlannerModule",
+    "create_planner_module",
     # Issue #5
     # "OutputNetwork",
 ]

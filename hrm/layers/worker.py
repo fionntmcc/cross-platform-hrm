@@ -1,3 +1,34 @@
+"""
+Worker (Low-Level) Module for HRM
+
+Issue #3: Worker Module Implementation
+
+This module provides the Worker module (f_L) that performs fast, detailed
+computations within each outer planning cycle. The Worker iterates to
+convergence, refining the low-level hidden state.
+
+Architecture Decision:
+    Option A (CHOSEN): MLP-based with residual connections
+    Option B (Alternative): Attention-based
+    
+    Rationale for MLP-based approach:
+    1. Simpler architecture, easier to debug and maintain
+    2. Better ONNX export compatibility for cross-platform deployment
+    3. Lower computational overhead per iteration (important since Worker
+       iterates multiple times per Planner step)
+    4. Sufficient representational power for local refinement tasks
+    5. Residual connections provide gradient highways for deep iteration
+    
+    The attention-based approach would offer:
+    - Better long-range dependency modeling
+    - More expressive representations
+    But these benefits are less critical for the Worker's local refinement
+    role, where the Planner handles high-level reasoning.
+
+Reference:
+    - HRM Architecture Specification
+    - "Deep Residual Learning for Image Recognition" (He et al., 2015)
+"""
 
 import torch
 import torch.nn as nn
@@ -217,3 +248,96 @@ class WorkerModule(nn.Module):
             f"hidden_dim={self.hidden_dim}, mlp_ratio={self.mlp_ratio}, "
             f"dropout={self.dropout_p}, use_input_proj={self.use_input_proj}"
         )
+
+
+class WorkerModuleWithGating(WorkerModule):
+    """
+    Worker module variant with gated residual connection.
+    
+    Adds a learnable gate to control how much of the MLP output is added
+    to the residual. This can help with training stability and allows the
+    model to learn when to update vs. preserve the hidden state.
+    
+    The gate is computed as: gate = sigmoid(W_g @ [h_L_prev, mlp_out])
+    Output: h_L_new = h_L_prev + gate * mlp_out
+    
+    Args:
+        hidden_dim: Dimension of hidden states. Default: 256
+        mlp_ratio: Ratio for MLP hidden dimension. Default: 4
+        dropout: Dropout probability. Default: 0.1
+        use_input_proj: Whether to use x_in input. Default: True
+        norm_eps: Epsilon for RMSNorm. Default: 1e-6
+    
+    Example:
+        >>> worker = WorkerModuleWithGating(hidden_dim=256)
+        >>> h_L_new = worker(h_L, h_H, x_in)
+    """
+    
+    def __init__(
+        self,
+        hidden_dim: int = 256,
+        mlp_ratio: int = 4,
+        dropout: float = 0.1,
+        use_input_proj: bool = True,
+        norm_eps: float = 1e-6,
+    ):
+        super().__init__(
+            hidden_dim=hidden_dim,
+            mlp_ratio=mlp_ratio,
+            dropout=dropout,
+            use_input_proj=use_input_proj,
+            norm_eps=norm_eps,
+        )
+        
+        # Gating mechanism: learns when to update vs. preserve state
+        self.gate = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim),
+            nn.Sigmoid(),
+        )
+        
+        # Initialise gate to start with ~0.5 (balanced)
+        nn.init.zeros_(self.gate[0].weight)
+        nn.init.zeros_(self.gate[0].bias)
+    
+    def forward(
+        self,
+        h_L_prev: torch.Tensor,
+        h_H: torch.Tensor,
+        x_in: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """
+        Compute one Worker iteration with gated residual.
+        
+        Args:
+            h_L_prev: Previous low-level hidden state.
+            h_H: High-level hidden state from Planner.
+            x_in: Optional input embedding.
+        
+        Returns:
+            Updated low-level hidden state.
+        """
+        # Validate inputs (same as parent)
+        if self.use_input_proj and x_in is None:
+            raise ValueError("x_in is required when use_input_proj=True")
+        
+        # Combine inputs
+        if self.use_input_proj and x_in is not None:
+            combined = torch.cat([h_L_prev, h_H, x_in], dim=-1)
+        else:
+            combined = torch.cat([h_L_prev, h_H], dim=-1)
+        
+        # Project and MLP
+        projected = self.input_proj(combined)
+        mlp_out = self.mlp(projected)
+        
+        # Compute gate value
+        gate_input = torch.cat([h_L_prev, mlp_out], dim=-1)
+        gate_value = self.gate(gate_input)
+        
+        # Gated residual connection
+        h_L_new = h_L_prev + gate_value * mlp_out
+        
+        # Post-norm
+        h_L_new = self.post_norm(h_L_new)
+        
+        return h_L_new

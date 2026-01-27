@@ -282,6 +282,13 @@ def save_dataset(dataset, filename_prefix, save_format='npz'):
         filename_prefix: Prefix for output files
         save_format: 'npz' (compressed numpy) or 'npy' (separate files)
     """
+    from pathlib import Path
+    
+    # Ensure parent directory exists
+    output_path = Path(filename_prefix)
+    if output_path.parent and str(output_path.parent) != '.':
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    
     if save_format == 'npz':
         np.savez_compressed(
             f'{filename_prefix}.npz',

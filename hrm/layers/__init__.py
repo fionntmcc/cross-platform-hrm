@@ -11,26 +11,25 @@ This module contains all the building blocks for the Hierarchical Reasoning Mode
 
 from hrm.layers.norm import RMSNorm, RMSNormWithBias, create_norm_layer
 from hrm.layers.input_network import InputNetwork, create_input_network
-# from hrm.layers.worker import WorkerModule, create_worker_module  # Issue #3 (Fionn)
+from hrm.layers.worker import WorkerModule, WorkerModuleWithGating
 from hrm.layers.planner import PlannerModule, create_planner_module
-
-# Will be added as implemented:
-# from hrm.layers.output_network import OutputNetwork  # Issue #5
+from hrm.layers.output_network import OutputNetwork, create_output_network
 
 __all__ = [
-    # Issue #1
+    # Issue #1 - Normalisation
     "RMSNorm",
     "RMSNormWithBias",
     "create_norm_layer",
-    # Issue #2
+    # Issue #2 - Input Embedding
     "InputNetwork",
     "create_input_network",
-    # Issue #3 (Fionn working on this)
-    # "WorkerModule",
-    # "create_worker_module",
-    # Issue #4
+    # Issue #3 - Worker (Low-level)
+    "WorkerModule",
+    "WorkerModuleWithGating",
+    # Issue #4 - Planner (High-level)
     "PlannerModule",
     "create_planner_module",
-    # Issue #5
-    # "OutputNetwork",
+    # Issue #5 - Output Decoder
+    "OutputNetwork",
+    "create_output_network",
 ]

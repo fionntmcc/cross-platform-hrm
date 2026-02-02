@@ -15,10 +15,95 @@ Atlantic Technological University
 __version__ = "0.1.0"
 __author__ = "Fionn McCarthy, Kyrylo Kozlovskyi"
 
-# Will be uncommented as issues are completed:
-# from hrm.model import HRM_4x4  # Issue #8
+# Issue #8: Complete HRM Model
+from hrm.model import HRM_4x4, ExecutionTrace, create_hrm_4x4
+
+# Layers - Neural Network Components
+from hrm.layers import (
+    # Normalisation (Issue #1)
+    RMSNorm,
+    RMSNormWithBias,
+    create_norm_layer,
+    # Input Embedding (Issue #2)
+    InputNetwork,
+    create_input_network,
+    # Worker Module (Issue #3)
+    WorkerModule,
+    WorkerModuleWithGating,
+    # Planner Module (Issue #4)
+    PlannerModule,
+    create_planner_module,
+    # Output Network (Issue #5)
+    OutputNetwork,
+    create_output_network,
+)
+
+# Core - Iteration and Convergence Logic
+from hrm.core import (
+    # Fixed-point iteration (Issue #21)
+    fixed_point_iteration,
+    FixedPointIterator,
+    iterate_to_convergence,
+    compute_residual,
+    IterationStats,
+    # Hierarchical iteration (Issue #7)
+    hierarchical_iteration,
+    HierarchicalIterator,
+    hierarchical_iterate_to_convergence,
+    single_hierarchical_step,
+    OuterLoopStats,
+    # Adaptive Computation Time
+    QHaltingHead,
+    HaltingPolicy,
+    ACTStats,
+    HaltingQTrainer,
+    compute_ponder_cost,
+    compute_act_loss,
+    create_halting_components,
+)
 
 __all__ = [
+    # Package metadata
     "__version__",
-    # "HRM_4x4",  # Issue #8
+    "__author__",
+    # Complete Model (Issue #8)
+    "HRM_4x4",
+    "ExecutionTrace",
+    "create_hrm_4x4",
+    # Normalisation (Issue #1)
+    "RMSNorm",
+    "RMSNormWithBias",
+    "create_norm_layer",
+    # Input Network (Issue #2)
+    "InputNetwork",
+    "create_input_network",
+    # Worker Module (Issue #3)
+    "WorkerModule",
+    "WorkerModuleWithGating",
+    # Planner Module (Issue #4)
+    "PlannerModule",
+    "create_planner_module",
+    # Output Network (Issue #5)
+    "OutputNetwork",
+    "create_output_network",
+    # Fixed-point iteration (Issue #21)
+    "fixed_point_iteration",
+    "FixedPointIterator",
+    "iterate_to_convergence",
+    "compute_residual",
+    "IterationStats",
+    # Hierarchical iteration (Issue #7)
+    "hierarchical_iteration",
+    "HierarchicalIterator",
+    "hierarchical_iterate_to_convergence",
+    "single_hierarchical_step",
+    "OuterLoopStats",
+    # Adaptive Computation Time
+    "QHaltingHead",
+    "HaltingPolicy",
+    "ACTStats",
+    "HaltingQTrainer",
+    "compute_ponder_cost",
+    "compute_act_loss",
+    "create_halting_components",
 ]

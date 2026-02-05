@@ -18,6 +18,9 @@ __author__ = "Fionn McCarthy, Kyrylo Kozlovskyi"
 # Issue #8: Complete HRM Model
 from hrm.model import HRM_4x4, ExecutionTrace, create_hrm_4x4
 
+# Simplified L-Module Only Variant (Ge et al. 2025)
+from hrm.model_simple import HRM_4x4_Simple, SimpleExecutionTrace, create_hrm_4x4_simple
+
 # Layers - Neural Network Components
 from hrm.layers import (
     # Normalisation (Issue #1)
@@ -70,6 +73,10 @@ __all__ = [
     "HRM_4x4",
     "ExecutionTrace",
     "create_hrm_4x4",
+    # Simplified L-Module Only Variant (Ge et al. 2025)
+    "HRM_4x4_Simple",
+    "SimpleExecutionTrace",
+    "create_hrm_4x4_simple",
     # Normalisation (Issue #1)
     "RMSNorm",
     "RMSNormWithBias",

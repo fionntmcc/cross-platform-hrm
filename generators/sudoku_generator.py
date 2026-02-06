@@ -202,3 +202,246 @@ class SudokuGenerator:
                 puzzle[row][col] = original
         
         return puzzle, solution
+    
+    def _create_puzzle_9x9(
+        self, 
+        puzzle: List[List[int]], 
+        solution: List[List[int]], 
+        difficulty: Difficulty
+    ) -> Tuple[List[List[int]], List[List[int]]]:
+        """
+        Create a 9x9 puzzle based on backtrack difficulty.
+        
+        For 9x9:
+        - Easy: 0-4 backtracks
+        - Medium: 5-15 backtracks
+        - Hard: 15+ backtracks
+        """
+        min_backtracks, max_backtracks = self.DIFFICULTY_9X9_BACKTRACKS[difficulty]
+        
+        # Get all cell positions and shuffle them
+        positions = [(r, c) for r in range(9) for c in range(9)]
+        self._rng.shuffle(positions)
+        
+        for row, col in positions:
+            original = puzzle[row][col]
+            puzzle[row][col] = 0
+            
+            # Check if puzzle still has unique solution
+            if not self._has_unique_solution(puzzle):
+                puzzle[row][col] = original
+                continue
+            
+            # Check backtrack count
+            backtracks = self._count_backtracks(puzzle)
+            
+            # If we've exceeded the max backtracks for this difficulty,
+            # restore the cell and stop removing
+            if backtracks > max_backtracks:
+                puzzle[row][col] = original
+                break
+        
+        # Verify we meet minimum backtrack requirement
+        # If not, try to adjust (but priority is unique solution)
+        current_backtracks = self._count_backtracks(puzzle)
+        
+        # If puzzle is too easy, try removing more cells
+        if current_backtracks < min_backtracks:
+            # Try removing more cells to increase difficulty
+            remaining_positions = [(r, c) for r in range(9) for c in range(9) 
+                                   if puzzle[r][c] != 0]
+            self._rng.shuffle(remaining_positions)
+            
+            for row, col in remaining_positions:
+                original = puzzle[row][col]
+                puzzle[row][col] = 0
+                
+                if not self._has_unique_solution(puzzle):
+                    puzzle[row][col] = original
+                    continue
+                
+                backtracks = self._count_backtracks(puzzle)
+                if backtracks >= min_backtracks:
+                    if backtracks > max_backtracks:
+                        puzzle[row][col] = original
+                    break
+        
+        return puzzle, solution
+    
+    def _has_unique_solution(self, puzzle: List[List[int]]) -> bool:
+        """
+        Check if the puzzle has exactly one solution using backtracking.
+        
+        Args:
+            puzzle: The puzzle grid with empty cells (0s).
+            
+        Returns:
+            True if exactly one solution exists, False otherwise.
+        """
+        # Make a copy to avoid modifying the original
+        grid = [row[:] for row in puzzle]
+        solutions = [0]
+        
+        def solve(grid: List[List[int]]) -> bool:
+            """Recursive solver that counts solutions."""
+            if solutions[0] > 1:
+                return False  # Already found multiple solutions
+            
+            empty_cell = self._find_empty_cell(grid)
+            if empty_cell is None:
+                solutions[0] += 1
+                return solutions[0] == 1
+            
+            row, col = empty_cell
+            
+            for num in range(1, self.grid_size + 1):
+                if self._is_valid_placement(grid, row, col, num):
+                    grid[row][col] = num
+                    solve(grid)
+                    if solutions[0] > 1:
+                        return False
+                    grid[row][col] = 0
+            
+            return False
+        
+        solve(grid)
+        return solutions[0] == 1
+    
+    def _count_backtracks(self, puzzle: List[List[int]]) -> int:
+        """
+        Count the number of backtracks needed to solve the puzzle.
+        
+        This is used as a difficulty metric for 9x9 grids.
+        
+        Args:
+            puzzle: The puzzle grid with empty cells (0s).
+            
+        Returns:
+            Number of backtracks during solving.
+        """
+        grid = [row[:] for row in puzzle]
+        backtrack_count = [0]
+        
+        def solve(grid: List[List[int]]) -> bool:
+            empty_cell = self._find_empty_cell(grid)
+            if empty_cell is None:
+                return True
+            
+            row, col = empty_cell
+            
+            for num in range(1, self.grid_size + 1):
+                if self._is_valid_placement(grid, row, col, num):
+                    grid[row][col] = num
+                    if solve(grid):
+                        return True
+                    grid[row][col] = 0
+                    backtrack_count[0] += 1
+            
+            return False
+        
+        solve(grid)
+        return backtrack_count[0]
+    
+    def is_valid_grid(self, grid: List[List[int]]) -> bool:
+        """
+        Validate that a grid follows all Sudoku rules.
+        
+        Args:
+            grid: The grid to validate.
+            
+        Returns:
+            True if the grid is valid, False otherwise.
+        """
+        if len(grid) != self.grid_size:
+            return False
+        
+        for row in grid:
+            if len(row) != self.grid_size:
+                return False
+        
+        # Check all rows
+        for row in grid:
+            non_zero = [x for x in row if x != 0]
+            if len(non_zero) != len(set(non_zero)):
+                return False
+            if any(x < 0 or x > self.grid_size for x in row):
+                return False
+        
+        # Check all columns
+        for col in range(self.grid_size):
+            column = [grid[row][col] for row in range(self.grid_size)]
+            non_zero = [x for x in column if x != 0]
+            if len(non_zero) != len(set(non_zero)):
+                return False
+        
+        # Check all boxes
+        for box_row in range(self.box_size):
+            for box_col in range(self.box_size):
+                box = []
+                for r in range(box_row * self.box_size, (box_row + 1) * self.box_size):
+                    for c in range(box_col * self.box_size, (box_col + 1) * self.box_size):
+                        box.append(grid[r][c])
+                non_zero = [x for x in box if x != 0]
+                if len(non_zero) != len(set(non_zero)):
+                    return False
+        
+        return True
+    
+    def is_complete_grid(self, grid: List[List[int]]) -> bool:
+        """
+        Check if a grid is completely filled and valid.
+        
+        Args:
+            grid: The grid to check.
+            
+        Returns:
+            True if the grid is complete and valid, False otherwise.
+        """
+        if not self.is_valid_grid(grid):
+            return False
+        
+        for row in grid:
+            if 0 in row:
+                return False
+        
+        return True
+    
+    def count_empty_cells(self, grid: List[List[int]]) -> int:
+        """Count the number of empty cells (0s) in a grid."""
+        return sum(row.count(0) for row in grid)
+
+
+def generate_full_grid(grid_size: int = 9, seed: Optional[int] = None) -> List[List[int]]:
+    """
+    Convenience function to generate a complete valid Sudoku grid.
+    
+    Args:
+        grid_size: Size of the grid (4 or 9). Default is 9.
+        seed: Random seed for reproducibility.
+        
+    Returns:
+        A completely filled valid Sudoku grid.
+    """
+    generator = SudokuGenerator(grid_size=grid_size, seed=seed)
+    return generator.generate_full_grid()
+
+
+def create_puzzle(
+    difficulty: str = "medium",
+    grid_size: int = 9,
+    seed: Optional[int] = None
+) -> Tuple[List[List[int]], List[List[int]]]:
+    """
+    Convenience function to create a Sudoku puzzle.
+    
+    Args:
+        difficulty: Difficulty level ("easy", "medium", "hard"). Default is "medium".
+        grid_size: Size of the grid (4 or 9). Default is 9.
+        seed: Random seed for reproducibility.
+        
+    Returns:
+        A tuple of (puzzle, solution).
+    """
+    difficulty_enum = Difficulty(difficulty.lower())
+    generator = SudokuGenerator(grid_size=grid_size, seed=seed)
+    return generator.create_puzzle(difficulty_enum)

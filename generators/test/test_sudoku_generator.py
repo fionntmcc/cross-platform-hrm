@@ -3,7 +3,11 @@ Tests for the Sudoku puzzle generator module.
 """
 import pytest
 import sys
+import tempfile
+import os
 from pathlib import Path
+
+import numpy as np
 
 # Add project root to path for imports
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -14,6 +18,8 @@ from generators.sudoku_generator import (
     Difficulty,
     generate_full_grid,
     create_puzzle,
+    generate_sudoku_dataset,
+    save_dataset,
 )
 
 
@@ -561,3 +567,392 @@ class TestEdgeCases:
         assert gen.is_valid_grid(puzzle)
         assert gen.is_complete_grid(solution)
         assert gen._has_unique_solution(puzzle)
+
+
+class TestGenerateSudokuDataset:
+    """Tests for dataset generation functionality."""
+
+    def test_dataset_returns_dict(self):
+        """Test generate_sudoku_dataset returns correct dict structure."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            difficulty="easy",
+            seed=42,
+            verbose=False
+        )
+        
+        assert isinstance(dataset, dict)
+        assert 'problems' in dataset
+        assert 'solutions' in dataset
+        assert 'metadata' in dataset
+
+    def test_dataset_correct_shape_4x4(self):
+        """Test dataset has correct shape for 4x4 puzzles."""
+        num_puzzles = 10
+        dataset = generate_sudoku_dataset(
+            num_puzzles=num_puzzles,
+            grid_size=4,
+            difficulty="medium",
+            seed=42,
+            verbose=False
+        )
+        
+        assert dataset['problems'].shape == (num_puzzles, 4, 4)
+        assert dataset['solutions'].shape == (num_puzzles, 4, 4)
+
+    def test_dataset_correct_shape_9x9(self):
+        """Test dataset has correct shape for 9x9 puzzles."""
+        num_puzzles = 5
+        dataset = generate_sudoku_dataset(
+            num_puzzles=num_puzzles,
+            grid_size=9,
+            difficulty="easy",
+            seed=42,
+            verbose=False
+        )
+        
+        assert dataset['problems'].shape == (num_puzzles, 9, 9)
+        assert dataset['solutions'].shape == (num_puzzles, 9, 9)
+
+    def test_dataset_numpy_arrays(self):
+        """Test dataset contains numpy arrays."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        assert isinstance(dataset['problems'], np.ndarray)
+        assert isinstance(dataset['solutions'], np.ndarray)
+
+    def test_dataset_dtype(self):
+        """Test dataset arrays use int8 dtype."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        assert dataset['problems'].dtype == np.int8
+        assert dataset['solutions'].dtype == np.int8
+
+    def test_dataset_metadata_count(self):
+        """Test metadata count matches num_puzzles."""
+        num_puzzles = 15
+        dataset = generate_sudoku_dataset(
+            num_puzzles=num_puzzles,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        assert len(dataset['metadata']) == num_puzzles
+
+    def test_dataset_metadata_fields(self):
+        """Test metadata contains required fields."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            difficulty="hard",
+            seed=42,
+            verbose=False
+        )
+        
+        for meta in dataset['metadata']:
+            assert 'puzzle_id' in meta
+            assert 'empty_cells' in meta
+            assert 'difficulty' in meta
+            assert 'backtracks' in meta
+            assert 'grid_size' in meta
+
+    def test_dataset_reproducible_with_seed(self):
+        """Test dataset generation is reproducible with same seed."""
+        dataset1 = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        dataset2 = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        np.testing.assert_array_equal(dataset1['problems'], dataset2['problems'])
+        np.testing.assert_array_equal(dataset1['solutions'], dataset2['solutions'])
+
+    def test_dataset_different_without_same_seed(self):
+        """Test datasets differ with different seeds."""
+        dataset1 = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        dataset2 = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=123,
+            verbose=False
+        )
+        
+        assert not np.array_equal(dataset1['problems'], dataset2['problems'])
+
+    def test_dataset_problems_have_zeros(self):
+        """Test all problems have empty cells (zeros)."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=10,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        for problem in dataset['problems']:
+            assert 0 in problem
+
+    def test_dataset_solutions_no_zeros(self):
+        """Test all solutions are complete (no zeros)."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=10,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        for solution in dataset['solutions']:
+            assert 0 not in solution
+
+    def test_dataset_all_difficulties(self):
+        """Test dataset generation works for all difficulty levels."""
+        for difficulty in ['easy', 'medium', 'hard']:
+            dataset = generate_sudoku_dataset(
+                num_puzzles=3,
+                grid_size=4,
+                difficulty=difficulty,
+                seed=42,
+                verbose=False
+            )
+            
+            assert len(dataset['problems']) == 3
+            assert all(m['difficulty'] == difficulty for m in dataset['metadata'])
+
+
+class TestSaveDataset:
+    """Tests for dataset saving functionality."""
+
+    def test_save_dataset_npz(self):
+        """Test saving dataset in npz format."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = os.path.join(tmpdir, 'test_sudoku')
+            save_dataset(dataset, prefix, save_format='npz')
+            
+            # Check npz file exists
+            assert os.path.exists(f'{prefix}.npz')
+            
+            # Verify contents
+            loaded = np.load(f'{prefix}.npz')
+            np.testing.assert_array_equal(loaded['problems'], dataset['problems'])
+            np.testing.assert_array_equal(loaded['solutions'], dataset['solutions'])
+
+    def test_save_dataset_npy(self):
+        """Test saving dataset in npy format."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = os.path.join(tmpdir, 'test_sudoku')
+            save_dataset(dataset, prefix, save_format='npy')
+            
+            # Check npy files exist
+            assert os.path.exists(f'{prefix}_problems.npy')
+            assert os.path.exists(f'{prefix}_solutions.npy')
+            
+            # Verify contents
+            problems = np.load(f'{prefix}_problems.npy')
+            solutions = np.load(f'{prefix}_solutions.npy')
+            np.testing.assert_array_equal(problems, dataset['problems'])
+            np.testing.assert_array_equal(solutions, dataset['solutions'])
+
+    def test_save_dataset_metadata(self):
+        """Test metadata file is created."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=5,
+            grid_size=4,
+            difficulty='medium',
+            seed=42,
+            verbose=False
+        )
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix = os.path.join(tmpdir, 'test_sudoku')
+            save_dataset(dataset, prefix, save_format='npz')
+            
+            # Check metadata file exists
+            metadata_path = f'{prefix}_metadata.txt'
+            assert os.path.exists(metadata_path)
+            
+            # Verify metadata content
+            with open(metadata_path, 'r') as f:
+                content = f.read()
+                assert 'Puzzle 0:' in content
+                assert 'empty_cells=' in content
+                assert 'difficulty=medium' in content
+
+    def test_save_dataset_creates_directories(self):
+        """Test save_dataset creates parent directories."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=3,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nested_path = os.path.join(tmpdir, 'nested', 'dir', 'test_sudoku')
+            save_dataset(dataset, nested_path, save_format='npz')
+            
+            assert os.path.exists(f'{nested_path}.npz')
+
+
+class TestDatasetIntegration:
+    """Integration tests for full dataset workflow."""
+
+    def test_full_workflow_4x4(self):
+        """Test complete workflow: generate, save, load for 4x4."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Generate
+            dataset = generate_sudoku_dataset(
+                num_puzzles=10,
+                grid_size=4,
+                difficulty='medium',
+                seed=42,
+                verbose=False
+            )
+            
+            # Save
+            prefix = os.path.join(tmpdir, 'sudoku_4x4')
+            save_dataset(dataset, prefix, save_format='npz')
+            
+            # Load and verify
+            loaded = np.load(f'{prefix}.npz')
+            
+            assert loaded['problems'].shape == (10, 4, 4)
+            assert loaded['solutions'].shape == (10, 4, 4)
+            
+            # Verify each puzzle/solution pair
+            gen = SudokuGenerator(grid_size=4)
+            for i in range(10):
+                puzzle = loaded['problems'][i].tolist()
+                solution = loaded['solutions'][i].tolist()
+                
+                assert gen.is_valid_grid(puzzle)
+                assert gen.is_complete_grid(solution)
+
+    def test_full_workflow_9x9(self):
+        """Test complete workflow: generate, save, load for 9x9."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Generate
+            dataset = generate_sudoku_dataset(
+                num_puzzles=5,
+                grid_size=9,
+                difficulty='easy',
+                seed=42,
+                verbose=False
+            )
+            
+            # Save
+            prefix = os.path.join(tmpdir, 'sudoku_9x9')
+            save_dataset(dataset, prefix, save_format='npz')
+            
+            # Load and verify
+            loaded = np.load(f'{prefix}.npz')
+            
+            assert loaded['problems'].shape == (5, 9, 9)
+            assert loaded['solutions'].shape == (5, 9, 9)
+
+
+class TestUniqueness:
+    """Tests for puzzle uniqueness guarantees."""
+
+    def test_all_puzzles_unique_4x4(self):
+        """Test that all generated 4x4 puzzles are unique."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=50,
+            grid_size=4,
+            difficulty='medium',
+            seed=42,
+            verbose=False,
+            ensure_unique=True
+        )
+        
+        # Convert to set of tuples to check uniqueness
+        puzzle_set = set()
+        for puzzle in dataset['problems']:
+            puzzle_tuple = tuple(map(tuple, puzzle))
+            puzzle_set.add(puzzle_tuple)
+        
+        assert len(puzzle_set) == len(dataset['problems'])
+
+    def test_all_puzzles_unique_9x9(self):
+        """Test that all generated 9x9 puzzles are unique."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=20,
+            grid_size=9,
+            difficulty='easy',
+            seed=42,
+            verbose=False,
+            ensure_unique=True
+        )
+        
+        # Convert to set of tuples to check uniqueness
+        puzzle_set = set()
+        for puzzle in dataset['problems']:
+            puzzle_tuple = tuple(map(tuple, puzzle))
+            puzzle_set.add(puzzle_tuple)
+        
+        assert len(puzzle_set) == len(dataset['problems'])
+
+    def test_ensure_unique_default_true(self):
+        """Test that ensure_unique defaults to True."""
+        dataset = generate_sudoku_dataset(
+            num_puzzles=30,
+            grid_size=4,
+            seed=42,
+            verbose=False
+        )
+        
+        puzzle_set = set()
+        for puzzle in dataset['problems']:
+            puzzle_tuple = tuple(map(tuple, puzzle))
+            puzzle_set.add(puzzle_tuple)
+        
+        assert len(puzzle_set) == len(dataset['problems'])
+
+    def test_can_disable_uniqueness_check(self):
+        """Test that uniqueness check can be disabled."""
+        # This should work without errors even if duplicates occur
+        dataset = generate_sudoku_dataset(
+            num_puzzles=10,
+            grid_size=4,
+            seed=42,
+            verbose=False,
+            ensure_unique=False
+        )
+        
+        assert len(dataset['problems']) == 10

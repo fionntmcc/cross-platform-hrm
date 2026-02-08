@@ -2,12 +2,23 @@
 Sudoku puzzle generator that produces unique-solution puzzles with adjustable difficulty.
 
 Supports 4x4 (development) and 9x9 (production) grids.
+
+Output structure for NN training:
+- problems: np.array of shape (num_puzzles, grid_size, grid_size)
+- solutions: np.array of shape (num_puzzles, grid_size, grid_size)
+
+Usage:
+    python sudoku_generator.py --num 100 --size 9 --difficulty medium --seed 42
 """
 
 import random
 import math
-from typing import Optional, Tuple, List
+import argparse
+from pathlib import Path
+from typing import Optional, Tuple, List, Dict, Any
 from enum import Enum
+
+import numpy as np
 
 
 class Difficulty(Enum):
@@ -445,3 +456,251 @@ def create_puzzle(
     difficulty_enum = Difficulty(difficulty.lower())
     generator = SudokuGenerator(grid_size=grid_size, seed=seed)
     return generator.create_puzzle(difficulty_enum)
+
+
+def generate_sudoku_dataset(
+    num_puzzles: int = 100,
+    grid_size: int = 9,
+    difficulty: str = "medium",
+    seed: Optional[int] = None,
+    verbose: bool = True,
+    ensure_unique: bool = True
+) -> Dict[str, Any]:
+    """
+    Generate a dataset of Sudoku puzzles with solutions for neural network training.
+    
+    Args:
+        num_puzzles: Number of puzzles to generate.
+        grid_size: Size of the grid (4 or 9). Default is 9.
+        difficulty: Difficulty level ("easy", "medium", "hard"). Default is "medium".
+        seed: Random seed for reproducibility.
+        verbose: Print progress information.
+        ensure_unique: If True, guarantees all puzzles are unique (default: True).
+    
+    Returns:
+        dict with keys:
+            - 'problems': np.array of shape (num_puzzles, grid_size, grid_size)
+            - 'solutions': np.array of shape (num_puzzles, grid_size, grid_size)
+            - 'metadata': list of dicts with empty_cells, difficulty, backtracks for each puzzle
+    """
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+    
+    difficulty_enum = Difficulty(difficulty.lower())
+    generator = SudokuGenerator(grid_size=grid_size, seed=seed)
+    
+    problems = []
+    solutions = []
+    metadata = []
+    seen_puzzles: set = set()  # Track unique puzzles by their tuple representation
+    
+    generated = 0
+    attempts = 0
+    max_attempts = num_puzzles * 10  # Prevent infinite loops
+    
+    while generated < num_puzzles and attempts < max_attempts:
+        attempts += 1
+        puzzle, solution = generator.create_puzzle(difficulty_enum)
+        
+        # Check uniqueness if required
+        if ensure_unique:
+            puzzle_key = tuple(tuple(row) for row in puzzle)
+            if puzzle_key in seen_puzzles:
+                continue  # Skip duplicate
+            seen_puzzles.add(puzzle_key)
+        
+        empty_cells = generator.count_empty_cells(puzzle)
+        backtracks = generator._count_backtracks(puzzle)
+        
+        problems.append(puzzle)
+        solutions.append(solution)
+        metadata.append({
+            'puzzle_id': generated,
+            'empty_cells': empty_cells,
+            'difficulty': difficulty,
+            'backtracks': backtracks,
+            'grid_size': grid_size
+        })
+        
+        generated += 1
+        if verbose and generated % 10 == 0:
+            print(f"Generated {generated}/{num_puzzles} puzzles...")
+    
+    if generated < num_puzzles:
+        print(f"Warning: Only generated {generated}/{num_puzzles} unique puzzles after {max_attempts} attempts")
+    
+    if verbose:
+        print(f"Successfully generated {num_puzzles} puzzles")
+    
+    return {
+        'problems': np.array(problems, dtype=np.int8),
+        'solutions': np.array(solutions, dtype=np.int8),
+        'metadata': metadata
+    }
+
+
+def save_dataset(
+    dataset: Dict[str, Any],
+    filename_prefix: str,
+    save_format: str = 'npz'
+) -> None:
+    """
+    Save the dataset to files.
+    
+    Args:
+        dataset: The dataset dict from generate_sudoku_dataset.
+        filename_prefix: Prefix for output files.
+        save_format: 'npz' (compressed numpy) or 'npy' (separate files).
+    """
+    # Ensure parent directory exists
+    output_path = Path(filename_prefix)
+    if output_path.parent and str(output_path.parent) != '.':
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if save_format == 'npz':
+        np.savez_compressed(
+            f'{filename_prefix}.npz',
+            problems=dataset['problems'],
+            solutions=dataset['solutions']
+        )
+        print(f"Saved to {filename_prefix}.npz")
+    
+    elif save_format == 'npy':
+        np.save(f'{filename_prefix}_problems.npy', dataset['problems'])
+        np.save(f'{filename_prefix}_solutions.npy', dataset['solutions'])
+        print(f"Saved to {filename_prefix}_problems.npy and {filename_prefix}_solutions.npy")
+    
+    # Save metadata as text
+    with open(f'{filename_prefix}_metadata.txt', 'w') as f:
+        # Write header with dataset info
+        if dataset['metadata']:
+            first_meta = dataset['metadata'][0]
+            f.write(f"# Sudoku Dataset: {len(dataset['metadata'])} puzzles, "
+                    f"grid_size={first_meta['grid_size']}, difficulty={first_meta['difficulty']}\n")
+        
+        for meta in dataset['metadata']:
+            f.write(f"Puzzle {meta['puzzle_id']}: "
+                    f"empty_cells={meta['empty_cells']}, "
+                    f"backtracks={meta['backtracks']}, "
+                    f"difficulty={meta['difficulty']}\n")
+    print(f"Metadata saved to {filename_prefix}_metadata.txt")
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Generate Sudoku puzzle datasets for neural network training',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate 100 medium 9x9 puzzles
+  python sudoku_generator.py --num 100 --size 9 --difficulty medium
+
+  # Generate 50 easy 4x4 puzzles with seed for reproducibility
+  python sudoku_generator.py --num 50 --size 4 --difficulty easy --seed 42
+
+  # Generate hard puzzles and save to custom location
+  python sudoku_generator.py --num 200 --difficulty hard --output ./data/hard_puzzles
+
+Difficulty Levels (4x4):
+  easy:   6-8 empty cells
+  medium: 9-11 empty cells
+  hard:   12+ empty cells
+
+Difficulty Levels (9x9):
+  easy:   0-4 backtracks to solve
+  medium: 5-15 backtracks to solve
+  hard:   15+ backtracks to solve
+"""
+    )
+    
+    parser.add_argument(
+        '--num', '-n',
+        type=int,
+        default=100,
+        help='Number of puzzles to generate (default: 100)'
+    )
+    parser.add_argument(
+        '--size', '-s',
+        type=int,
+        choices=[4, 9],
+        default=9,
+        help='Grid size: 4 (development) or 9 (production) (default: 9)'
+    )
+    parser.add_argument(
+        '--difficulty', '-d',
+        type=str,
+        choices=['easy', 'medium', 'hard'],
+        default='medium',
+        help='Difficulty level (default: medium)'
+    )
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help='Random seed for reproducibility (default: None)'
+    )
+    parser.add_argument(
+        '--output', '-o',
+        type=str,
+        default=None,
+        help='Output filename prefix (default: sudoku_<size>x<size>_<difficulty>)'
+    )
+    parser.add_argument(
+        '--format', '-f',
+        type=str,
+        choices=['npz', 'npy'],
+        default='npz',
+        help='Output format: npz (compressed) or npy (separate files) (default: npz)'
+    )
+    parser.add_argument(
+        '--quiet', '-q',
+        action='store_true',
+        help='Suppress progress output'
+    )
+    
+    return parser.parse_args()
+
+
+def main() -> None:
+    """Main entry point for command-line usage."""
+    args = parse_args()
+    
+    # Set default output filename if not specified
+    if args.output is None:
+        args.output = f'sudoku_{args.size}x{args.size}_{args.difficulty}'
+    
+    print(f"Generating {args.num} {args.difficulty} {args.size}x{args.size} Sudoku puzzles...")
+    if args.seed is not None:
+        print(f"Using random seed: {args.seed}")
+    
+    # Generate the dataset
+    dataset = generate_sudoku_dataset(
+        num_puzzles=args.num,
+        grid_size=args.size,
+        difficulty=args.difficulty,
+        seed=args.seed,
+        verbose=not args.quiet
+    )
+    
+    # Save the dataset
+    save_dataset(dataset, args.output, args.format)
+    
+    # Print summary
+    print(f"\nDataset Summary:")
+    print(f"  Puzzles: {len(dataset['problems'])}")
+    print(f"  Grid size: {args.size}x{args.size}")
+    print(f"  Difficulty: {args.difficulty}")
+    print(f"  Problems shape: {dataset['problems'].shape}")
+    print(f"  Solutions shape: {dataset['solutions'].shape}")
+    
+    # Print difficulty statistics
+    empty_cells = [m['empty_cells'] for m in dataset['metadata']]
+    backtracks = [m['backtracks'] for m in dataset['metadata']]
+    print(f"  Empty cells: min={min(empty_cells)}, max={max(empty_cells)}, avg={sum(empty_cells)/len(empty_cells):.1f}")
+    print(f"  Backtracks: min={min(backtracks)}, max={max(backtracks)}, avg={sum(backtracks)/len(backtracks):.1f}")
+
+
+if __name__ == '__main__':
+    main()

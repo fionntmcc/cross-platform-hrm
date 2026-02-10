@@ -15,7 +15,8 @@ Author: Kyrylo Kozlovskyi (G00425385)
 
 import numpy as np
 import pytest
-from validator import (
+
+from hrm.data.validator import (
     _validate_grid_input,
     count_filled_cells,
     get_empty_cells,
@@ -407,13 +408,12 @@ class TestGetValidCandidates:
         candidates = get_valid_candidates(almost, 0, 0)
         assert candidates == [original_val]
 
-    def test_no_candidates_full_row(self):
-        # Row has 1,2,3 — col has none of those blocked, box has none
-        # Actually we need a scenario where no digit works
+    def test_single_candidate_full_row(self):
+        # Row has 1,2,3, so only 4 is a valid candidate at position (0,3)
         grid = [[1, 2, 3, 0], [4, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
         candidates = get_valid_candidates(grid, 0, 3)
         assert 4 in candidates
-        # 1,2,3 are in row, so only 4 should work
+        # 1,2,3 are in the row already, so only 4 should work
         assert candidates == [4]
 
     def test_returns_sorted(self):

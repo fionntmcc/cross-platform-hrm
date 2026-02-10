@@ -25,6 +25,7 @@ MANIFEST
 
 # Virtual Environment
 venv/
+.venv/
 env/
 ENV/
 env.bak/
@@ -78,6 +79,14 @@ coverage.xml
 # Environment variables
 .env
 .env.local
+
+# Dependency lock files (dependencies defined in pyproject.toml)
+requirements.txt
+requirements-dev.txt
+requirements*.txt
+
+# Ruff cache
+.ruff_cache/
 
 # OS specific
 .DS_Store

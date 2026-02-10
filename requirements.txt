@@ -1,3 +1,21 @@
+# =============================================================================
+# Cross-Platform Hierarchical Reasoning Model (HRM)
+# =============================================================================
+# Auto-generated from pyproject.toml — do not edit manually.
+# Regenerate with:
+#   pip-compile pyproject.toml -o requirements.txt
+# Or simply install in development mode:
+#   pip install -e .[dev]
+# =============================================================================
+
+# ------ Core dependencies ------
 torch>=2.0.0
 numpy>=1.24.0
 tqdm>=4.65.0
+
+# ------ Dev / CI dependencies (install with: pip install -e .[dev]) ------
+# black>=24.10.0
+# ruff>=0.8.6
+# pre-commit>=3.7.0
+# pytest>=7.0
+# pytest-cov>=5.0

@@ -61,6 +61,9 @@ datasets/
 *.npy
 *.npz
 
+# But allow hrm/data/ which contains code modules
+!hrm/data/
+
 # Logs and outputs
 logs/
 *.log

@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "cross-platform-hrm"
 version = "0.1.0"
@@ -11,12 +15,16 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "black>=24.0",
-    "ruff>=0.4.0",
+    "black>=24.10.0",
+    "ruff>=0.8.6",
     "pre-commit>=3.7.0",
-    "pytest>=8.0",
+    "pytest>=7.0",
     "pytest-cov>=5.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hrm*"]
 
 # =============================================================================
 # Black Configuration
@@ -71,7 +79,7 @@ known-first-party = ["hrm"]
 # Pytest Configuration
 # =============================================================================
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["test/hrm_test"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -98,7 +106,7 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 precision = 2
-fail_under = 60
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

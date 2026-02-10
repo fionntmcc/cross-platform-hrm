@@ -1,0 +1,112 @@
+[project]
+name = "cross-platform-hrm"
+version = "0.1.0"
+description = "Cross-Platform Hierarchical Reasoning Model for constraint-satisfaction problems"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.0",
+    "ruff>=0.4.0",
+    "pre-commit>=3.7.0",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+# =============================================================================
+# Black Configuration
+# =============================================================================
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+include = '\.pyi?$'
+
+# =============================================================================
+# Ruff Configuration
+# =============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["hrm", "test"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (import sorting)
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by Black)
+    "B008",   # do not perform function call in argument defaults
+    "SIM108", # use ternary operator (can reduce readability)
+    "RUF012", # mutable class variables (common in dataclasses)
+    "UP007",  # use X | Y for union types (not always clearer)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test/**/*.py" = [
+    "S101",   # use of assert (expected in tests)
+    "N802",   # function name should be lowercase (test names can vary)
+]
+"hrm/prototype/**/*.py" = [
+    "E",      # prototype code — relaxed style enforcement
+    "W",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["hrm"]
+
+# =============================================================================
+# Pytest Configuration
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+# =============================================================================
+# Coverage Configuration
+# =============================================================================
+[tool.coverage.run]
+source = ["hrm"]
+omit = [
+    "hrm/prototype/*",
+    "hrm/__pycache__/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+fail_under = 60
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"

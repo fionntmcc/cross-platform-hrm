@@ -72,6 +72,7 @@ checkpoints/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
 .tox/
 
 # Environment variables

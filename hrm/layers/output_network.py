@@ -271,3 +271,148 @@ def create_output_network(
         grid_size=grid_size,
         **kwargs
     )
+
+
+class OutputNetworkTransformer(nn.Module):
+    """
+    Transformer-style output network (Sapient-compatible LM head).
+    
+    Produces per-position vocabulary logits from hidden states. Unlike the
+    MLP-based OutputNetwork which has separate cell/digit heads, this uses
+    a single language model head that predicts the token at each position.
+    
+    Key differences from MLP OutputNetwork:
+    - Single head produces vocab logits for all positions simultaneously
+    - Output: (batch, seq_len, vocab_size) instead of separate cell/digit
+    - Suitable for autoregressive or masked prediction training
+    - Can optionally share weights with input embedding
+    
+    Args:
+        hidden_size: Model hidden dimension. Default: 256
+        vocab_size: Output vocabulary size.
+            For Sudoku: 10 (0=empty, 1-9=digits)
+        tie_weights: Whether to tie with input embedding weights. Default: False
+        dtype: Data type for computation. Default: torch.bfloat16
+    
+    Shape:
+        - Input: (batch, seq_len, hidden_size) - Final hidden states
+        - Output: (batch, seq_len, vocab_size) - Per-position logits
+    
+    Example:
+        >>> output_net = OutputNetworkTransformer(
+        ...     hidden_size=256,
+        ...     vocab_size=10,
+        ... )
+        >>> h_final = torch.randn(8, 81, 256)  # Final hidden states
+        >>> logits = output_net(h_final)
+        >>> logits.shape
+        torch.Size([8, 81, 10])
+    """
+    
+    def __init__(
+        self,
+        hidden_size: int = 256,
+        vocab_size: int = 10,
+        tie_weights: bool = False,
+        dtype: torch.dtype = torch.bfloat16,
+    ):
+        super().__init__()
+        
+        from hrm.layers.transformer import CastedLinear, trunc_normal_init_
+        from hrm.layers.norm import rms_norm
+        
+        self.hidden_size = hidden_size
+        self.vocab_size = vocab_size
+        self.tie_weights = tie_weights
+        self.dtype = dtype
+        
+        # Pre-head normalisation (functional RMSNorm like Sapient)
+        self.rms_norm_eps = 1e-5
+        
+        # LM head: hidden_size -> vocab_size
+        if not tie_weights:
+            self.lm_head = CastedLinear(hidden_size, vocab_size, dtype=dtype)
+            trunc_normal_init_(self.lm_head.weight, std=0.02)
+            if self.lm_head.bias is not None:
+                nn.init.zeros_(self.lm_head.bias)
+        else:
+            # Weight will be set externally via tie_embedding_weights()
+            self.lm_head = None
+            self.register_parameter('lm_weight', None)
+    
+    def tie_embedding_weights(self, embedding_weight: torch.Tensor) -> None:
+        """
+        Tie the LM head weights to input embedding weights.
+        
+        Args:
+            embedding_weight: Input embedding weight tensor of shape
+                (vocab_size, hidden_size). Transpose will be applied.
+        """
+        if self.tie_weights:
+            # Store reference (not a copy) for weight tying
+            self.lm_weight = embedding_weight
+    
+    def forward(self, h: torch.Tensor) -> torch.Tensor:
+        """
+        Project hidden states to vocabulary logits.
+        
+        Args:
+            h: Hidden states of shape (batch, seq_len, hidden_size).
+        
+        Returns:
+            Logits of shape (batch, seq_len, vocab_size).
+        """
+        from hrm.layers.norm import rms_norm
+        
+        # Apply RMSNorm before projection (Sapient-style post-norm)
+        h = rms_norm(h, eps=self.rms_norm_eps)
+        
+        if self.lm_head is not None:
+            # Standard LM head projection
+            return self.lm_head(h)
+        elif self.lm_weight is not None:
+            # Tied weights: h @ W^T where W is embedding weight
+            return F.linear(h.to(self.lm_weight.dtype), self.lm_weight)
+        else:
+            raise RuntimeError(
+                "No LM head available. Call tie_embedding_weights() or "
+                "set tie_weights=False."
+            )
+    
+    def predict(self, h: torch.Tensor) -> torch.Tensor:
+        """
+        Get predicted token indices for all positions.
+        
+        Args:
+            h: Hidden states of shape (batch, seq_len, hidden_size).
+        
+        Returns:
+            Token indices of shape (batch, seq_len).
+        """
+        logits = self.forward(h)
+        return logits.argmax(dim=-1)
+    
+    def predict_with_confidence(
+        self, h: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Get predictions with confidence scores.
+        
+        Args:
+            h: Hidden states of shape (batch, seq_len, hidden_size).
+        
+        Returns:
+            Tuple of (token_indices, confidence):
+                - token_indices: (batch, seq_len) - Predicted tokens
+                - confidence: (batch, seq_len) - Confidence scores
+        """
+        logits = self.forward(h)
+        probs = F.softmax(logits, dim=-1)
+        confidence, indices = probs.max(dim=-1)
+        return indices, confidence
+    
+    def extra_repr(self) -> str:
+        return (
+            f"hidden_size={self.hidden_size}, vocab_size={self.vocab_size}, "
+            f"tie_weights={self.tie_weights}"
+        )

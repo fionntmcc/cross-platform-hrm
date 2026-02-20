@@ -277,3 +277,119 @@ def create_input_network(
         hidden_dim=hidden_dim,
         **kwargs
     )
+
+
+class InputNetworkTransformer(nn.Module):
+    """
+    Transformer-style input network (Sapient-compatible).
+    
+    Converts sequence of tokens to hidden representations suitable for
+    transformer-based processing. Unlike the MLP-based InputNetwork, this
+    preserves the sequence structure for attention-based reasoning.
+    
+    Key differences from MLP InputNetwork:
+    - Input: sequence (batch, seq_len) instead of 2D grid
+    - Output: per-token hidden states (batch, seq_len, hidden_size)
+    - No flattening - preserves sequence for attention
+    - Optional puzzle type embedding for multi-task learning
+    - Position encoding handled externally via RoPE
+    
+    Args:
+        vocab_size: Size of the token vocabulary.
+            For Sudoku: 10 (0=empty, 1-9=digits)
+            For mazes: varies based on encoding
+        hidden_size: Model hidden dimension. Default: 256
+        num_puzzles: Number of puzzle types for embedding. Default: 1
+        use_puzzle_embedding: Whether to add puzzle type embedding. Default: False
+        dtype: Data type for computations. Default: torch.bfloat16
+    
+    Shape:
+        - Input x: (batch, seq_len) integer tokens
+        - Input puzzle_ids: (batch,) optional puzzle type indices
+        - Output: (batch, seq_len, hidden_size) hidden states
+    
+    Example:
+        >>> input_net = InputNetworkTransformer(
+        ...     vocab_size=10,
+        ...     hidden_size=256,
+        ... )
+        >>> tokens = torch.randint(0, 10, (8, 81))  # batch of 8 9x9 sudoku
+        >>> hidden = input_net(tokens)
+        >>> hidden.shape
+        torch.Size([8, 81, 256])
+    """
+    
+    def __init__(
+        self,
+        vocab_size: int,
+        hidden_size: int = 256,
+        num_puzzles: int = 1,
+        use_puzzle_embedding: bool = False,
+        dtype: torch.dtype = torch.bfloat16,
+    ):
+        super().__init__()
+        
+        from hrm.layers.transformer import CastedEmbedding, CastedLinear, trunc_normal_init_
+        
+        self.vocab_size = vocab_size
+        self.hidden_size = hidden_size
+        self.num_puzzles = num_puzzles
+        self.use_puzzle_embedding = use_puzzle_embedding
+        self.dtype = dtype
+        
+        # Token embedding (cast to dtype)
+        self.tok_emb = CastedEmbedding(vocab_size, hidden_size, dtype=dtype)
+        
+        # Optional puzzle type embedding for multi-task learning
+        if use_puzzle_embedding and num_puzzles > 1:
+            self.puzzle_emb = CastedEmbedding(num_puzzles, hidden_size, dtype=dtype)
+        else:
+            self.puzzle_emb = None
+        
+        # Input projection: vocab embedding -> hidden_size
+        # Sapient uses this to project combined embeddings
+        self.input_proj = CastedLinear(hidden_size, hidden_size, dtype=dtype)
+        
+        # Initialise with truncated normal
+        trunc_normal_init_(self.tok_emb.weight, std=0.02)
+        if self.puzzle_emb is not None:
+            trunc_normal_init_(self.puzzle_emb.weight, std=0.02)
+        trunc_normal_init_(self.input_proj.weight, std=0.02)
+        if self.input_proj.bias is not None:
+            nn.init.zeros_(self.input_proj.bias)
+    
+    def forward(
+        self,
+        x: torch.Tensor,
+        puzzle_ids: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """
+        Convert token sequence to hidden representations.
+        
+        Args:
+            x: Input tokens of shape (batch, seq_len) with values in [0, vocab_size).
+            puzzle_ids: Optional puzzle type indices of shape (batch,) for
+                multi-task scenarios (e.g., different Sudoku sizes or mazes).
+        
+        Returns:
+            Hidden states of shape (batch, seq_len, hidden_size).
+        """
+        # Token embedding: (batch, seq_len) -> (batch, seq_len, hidden_size)
+        h = self.tok_emb(x)
+        
+        # Add puzzle type embedding if enabled
+        if self.puzzle_emb is not None and puzzle_ids is not None:
+            # puzzle_ids: (batch,) -> (batch, 1, hidden_size) -> broadcast
+            puzzle_embed = self.puzzle_emb(puzzle_ids).unsqueeze(1)
+            h = h + puzzle_embed
+        
+        # Project to hidden space
+        h = self.input_proj(h)
+        
+        return h
+    
+    def extra_repr(self) -> str:
+        return (
+            f"vocab_size={self.vocab_size}, hidden_size={self.hidden_size}, "
+            f"num_puzzles={self.num_puzzles}, use_puzzle_embedding={self.use_puzzle_embedding}"
+        )

@@ -513,3 +513,144 @@ def create_halting_components(
         epsilon=epsilon,
     )
     return q_head, policy
+
+
+class QHaltingHeadTransformer(nn.Module):
+    """
+    Sapient-compatible Q-halting head for transformer-based HRM.
+    
+    Unlike QHaltingHead which outputs (batch, 2) for unified halt/continue,
+    this outputs per-position Q-values suitable for sequence-based reasoning.
+    
+    Uses separate linear projections for Q_halt and Q_continue, matching
+    Sapient's architecture where halting decisions can be made per-position
+    or aggregated across the sequence.
+    
+    Args:
+        hidden_size: Model hidden dimension. Default: 256
+        dtype: Data type for computation. Default: torch.bfloat16
+    
+    Shape:
+        - Input: (batch, seq_len, hidden_size) - Reasoning state
+        - q_halt: (batch, seq_len, 1) - Q-values for halting
+        - q_continue: (batch, seq_len, 1) - Q-values for continuing
+    
+    Example:
+        >>> q_head = QHaltingHeadTransformer(hidden_size=256)
+        >>> z = torch.randn(8, 81, 256)  # Hidden states
+        >>> q_halt, q_continue = q_head(z)
+        >>> # Decision: aggregate over sequence
+        >>> should_halt = q_halt.mean(dim=1) > q_continue.mean(dim=1)
+    """
+    
+    def __init__(
+        self,
+        hidden_size: int = 256,
+        dtype: torch.dtype = torch.bfloat16,
+    ):
+        super().__init__()
+        
+        self.hidden_size = hidden_size
+        self.dtype = dtype
+        
+        # Separate Q-heads matching Sapient's q_halt, q_continue
+        self.q_halt = nn.Linear(hidden_size, 1)
+        self.q_continue = nn.Linear(hidden_size, 1)
+        
+        # Small initialization for stable training
+        self._init_weights()
+    
+    def _init_weights(self) -> None:
+        """Initialize with small weights for stable Q-learning."""
+        nn.init.xavier_uniform_(self.q_halt.weight, gain=0.1)
+        nn.init.zeros_(self.q_halt.bias)
+        nn.init.xavier_uniform_(self.q_continue.weight, gain=0.1)
+        nn.init.zeros_(self.q_continue.bias)
+    
+    def forward(
+        self,
+        z: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Compute Q-values for halt and continue actions.
+        
+        Args:
+            z: Reasoning hidden state of shape (batch, seq_len, hidden_size).
+        
+        Returns:
+            Tuple of (q_halt, q_continue):
+                - q_halt: (batch, seq_len, 1) Q-values for halting
+                - q_continue: (batch, seq_len, 1) Q-values for continuing
+        """
+        return self.q_halt(z), self.q_continue(z)
+    
+    def get_aggregated_q_values(
+        self,
+        z: torch.Tensor,
+        aggregation: str = "mean",
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Get sequence-aggregated Q-values for global halting decision.
+        
+        Args:
+            z: Hidden state of shape (batch, seq_len, hidden_size).
+            aggregation: How to aggregate over sequence ('mean' or 'max').
+        
+        Returns:
+            Tuple of (q_halt, q_continue) each of shape (batch,).
+        """
+        q_halt, q_continue = self.forward(z)
+        
+        if aggregation == "mean":
+            return q_halt.mean(dim=(1, 2)), q_continue.mean(dim=(1, 2))
+        elif aggregation == "max":
+            return q_halt.max(dim=1)[0].squeeze(-1), q_continue.max(dim=1)[0].squeeze(-1)
+        else:
+            raise ValueError(f"Unknown aggregation: {aggregation}")
+    
+    def should_halt(
+        self,
+        z: torch.Tensor,
+        cycle: int,
+        min_cycles: int = 2,
+        aggregation: str = "mean",
+        temperature: float = 1.0,
+        training: bool = False,
+    ) -> Tuple[bool, float]:
+        """
+        Make halting decision based on Q-values.
+        
+        Args:
+            z: Hidden state of shape (batch, seq_len, hidden_size).
+            cycle: Current iteration cycle (0-indexed).
+            min_cycles: Minimum cycles before halting allowed.
+            aggregation: How to aggregate Q-values over sequence.
+            temperature: Softmax temperature for exploration.
+            training: Whether in training mode (enables exploration).
+        
+        Returns:
+            Tuple of (should_halt, halt_probability).
+        """
+        # Enforce minimum cycles
+        if cycle < min_cycles:
+            return False, 0.0
+        
+        q_halt, q_continue = self.get_aggregated_q_values(z, aggregation)
+        
+        # Stack for softmax: (batch, 2)
+        q_values = torch.stack([q_halt, q_continue], dim=-1)
+        probs = F.softmax(q_values / temperature, dim=-1)
+        halt_prob = probs[:, 0].mean().item()
+        
+        if training:
+            # Softmax exploration during training
+            action = torch.multinomial(probs.mean(dim=0, keepdim=True), 1).item()
+            should_halt = (action == 0)
+        else:
+            # Greedy during inference
+            should_halt = (q_halt > q_continue).all().item()
+        
+        return should_halt, halt_prob
+    
+    def extra_repr(self) -> str:
+        return f"hidden_size={self.hidden_size}"

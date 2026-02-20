@@ -180,3 +180,97 @@ def create_planner_module(hidden_dim: int, **kwargs) -> PlannerModule:
         Configured PlannerModule instance.
     """
     return PlannerModule(hidden_dim=hidden_dim, **kwargs)
+
+
+class PlannerTransformer(nn.Module):
+    """
+    Transformer-based Planner module (Sapient-style H-level).
+    
+    Replaces the MLP-based Planner with a transformer-based ReasoningModule
+    that uses self-attention + SwiGLU MLP blocks with post-normalisation.
+    
+    This matches Sapient's H_level implementation which applies input
+    injection (adding z_L) before transformer layers.
+    
+    Args:
+        hidden_size: Model hidden dimension. Default: 256
+        num_heads: Number of attention heads. Default: 4
+        num_layers: Number of transformer blocks. Default: 4
+        expansion: MLP expansion factor. Default: 4.0
+        rms_norm_eps: Epsilon for RMS normalisation. Default: 1e-5
+        max_seq_len: Maximum sequence length for RoPE. Default: 1024
+        rope_base: Base for RoPE frequency computation. Default: 10000.0
+        causal: Whether attention is causal. Default: False
+    
+    Shape:
+        - z_H: (batch, seq_len, hidden_size) - H-level state
+        - z_L: (batch, seq_len, hidden_size) - L-level state to inject
+        - Output: (batch, seq_len, hidden_size) - Updated H-level state
+    
+    Example:
+        >>> planner = PlannerTransformer(hidden_size=256, num_heads=4, num_layers=4)
+        >>> z_H = torch.randn(8, 81, 256)  # H-level state
+        >>> z_L = torch.randn(8, 81, 256)  # L-level state
+        >>> z_H_new = planner(z_H, z_L)
+    """
+    
+    def __init__(
+        self,
+        hidden_size: int = 256,
+        num_heads: int = 4,
+        num_layers: int = 4,
+        expansion: float = 4.0,
+        rms_norm_eps: float = 1e-5,
+        max_seq_len: int = 1024,
+        rope_base: float = 10000.0,
+        causal: bool = False,
+    ):
+        super().__init__()
+        
+        from hrm.layers.transformer import ReasoningModule, RotaryEmbedding
+        
+        self.hidden_size = hidden_size
+        self.num_heads = num_heads
+        self.num_layers = num_layers
+        
+        # RoPE for positional encoding
+        head_dim = hidden_size // num_heads
+        self.rotary_emb = RotaryEmbedding(
+            dim=head_dim,
+            max_position_embeddings=max_seq_len,
+            base=rope_base,
+        )
+        
+        # Transformer reasoning module  
+        self.reasoning = ReasoningModule(
+            hidden_size=hidden_size,
+            num_heads=num_heads,
+            num_layers=num_layers,
+            expansion=expansion,
+            rms_norm_eps=rms_norm_eps,
+            causal=causal,
+        )
+    
+    def forward(
+        self,
+        z_H: torch.Tensor,
+        z_L: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Apply H-level transformer update.
+        
+        Args:
+            z_H: Current H-level state of shape (batch, seq_len, hidden_size).
+            z_L: L-level state to inject (from converged L iterations).
+        
+        Returns:
+            Updated H-level state of shape (batch, seq_len, hidden_size).
+        """
+        cos_sin = self.rotary_emb()
+        return self.reasoning(z_H, z_L, cos_sin=cos_sin)
+    
+    def extra_repr(self) -> str:
+        return (
+            f"hidden_size={self.hidden_size}, num_heads={self.num_heads}, "
+            f"num_layers={self.num_layers}"
+        )

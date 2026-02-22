@@ -20,6 +20,40 @@ import torch
 import torch.nn as nn
 
 
+def rms_norm(
+    hidden_states: torch.Tensor,
+    variance_epsilon: float = 1e-5,
+) -> torch.Tensor:
+    """
+    Functional RMS normalisation (Sapient-style, no learnable parameters).
+    
+    This is the preferred normalisation for transformer blocks in HRM,
+    matching Sapient's implementation which uses post-norm without
+    learnable scale parameters.
+    
+    Formula:
+        rms_norm(x) = x / sqrt(mean(x^2) + eps)
+    
+    Args:
+        hidden_states: Input tensor of shape (*, dim).
+        variance_epsilon: Small constant for numerical stability.
+    
+    Returns:
+        Normalised tensor of the same shape as input.
+    
+    Example:
+        >>> x = torch.randn(32, 128, 256)  # (batch, seq, hidden)
+        >>> normed = rms_norm(x, variance_epsilon=1e-5)
+    """
+    input_dtype = hidden_states.dtype
+    hidden_states = hidden_states.to(torch.float32)
+    
+    variance = hidden_states.square().mean(-1, keepdim=True)
+    hidden_states = hidden_states * torch.rsqrt(variance + variance_epsilon)
+    
+    return hidden_states.to(input_dtype)
+
+
 class RMSNorm(nn.Module):
     """
     Root Mean Square Layer Normalisation.

@@ -21,24 +21,50 @@ from hrm.model import HRM_4x4, ExecutionTrace, create_hrm_4x4
 # Simplified L-Module Only Variant (Ge et al. 2025)
 from hrm.model_simple import HRM_4x4_Simple, SimpleExecutionTrace, create_hrm_4x4_simple
 
+# Transformer-based HRM (Sapient-compatible)
+from hrm.model_transformer import (
+    HRMTransformer,
+    HRMTransformerConfig,
+    create_hrm_transformer,
+)
+
+# Unified HRM for multiple puzzle types
+from hrm.model_unified import (
+    UnifiedHRM,
+    UnifiedHRMConfig,
+    PuzzleType,
+    create_unified_hrm,
+)
+
 # Layers - Neural Network Components
 from hrm.layers import (
     # Normalisation (Issue #1)
     RMSNorm,
     RMSNormWithBias,
     create_norm_layer,
+    rms_norm,  # Functional RMSNorm
     # Input Embedding (Issue #2)
     InputNetwork,
     create_input_network,
+    InputNetworkTransformer,
     # Worker Module (Issue #3)
     WorkerModule,
     WorkerModuleWithGating,
+    WorkerTransformer,
     # Planner Module (Issue #4)
     PlannerModule,
     create_planner_module,
+    PlannerTransformer,
     # Output Network (Issue #5)
     OutputNetwork,
     create_output_network,
+    OutputNetworkTransformer,
+    # Transformer Building Blocks
+    SwiGLU,
+    RotaryEmbedding,
+    Attention,
+    TransformerBlock,
+    ReasoningModule,
 )
 
 # Core - Iteration and Convergence Logic
@@ -57,6 +83,7 @@ from hrm.core import (
     OuterLoopStats,
     # Adaptive Computation Time
     QHaltingHead,
+    QHaltingHeadTransformer,  # Sapient-compatible
     HaltingPolicy,
     ACTStats,
     HaltingQTrainer,
@@ -77,22 +104,42 @@ __all__ = [
     "HRM_4x4_Simple",
     "SimpleExecutionTrace",
     "create_hrm_4x4_simple",
+    # Transformer-based HRM (Sapient-compatible)
+    "HRMTransformer",
+    "HRMTransformerConfig",
+    "create_hrm_transformer",
+    # Unified HRM (multi-puzzle support)
+    "UnifiedHRM",
+    "UnifiedHRMConfig",
+    "PuzzleType",
+    "create_unified_hrm",
     # Normalisation (Issue #1)
     "RMSNorm",
     "RMSNormWithBias",
     "create_norm_layer",
+    "rms_norm",
     # Input Network (Issue #2)
     "InputNetwork",
     "create_input_network",
+    "InputNetworkTransformer",
     # Worker Module (Issue #3)
     "WorkerModule",
     "WorkerModuleWithGating",
+    "WorkerTransformer",
     # Planner Module (Issue #4)
     "PlannerModule",
     "create_planner_module",
+    "PlannerTransformer",
     # Output Network (Issue #5)
     "OutputNetwork",
     "create_output_network",
+    "OutputNetworkTransformer",
+    # Transformer Building Blocks
+    "SwiGLU",
+    "RotaryEmbedding",
+    "Attention",
+    "TransformerBlock",
+    "ReasoningModule",
     # Fixed-point iteration (Issue #21)
     "fixed_point_iteration",
     "FixedPointIterator",
@@ -107,6 +154,7 @@ __all__ = [
     "OuterLoopStats",
     # Adaptive Computation Time
     "QHaltingHead",
+    "QHaltingHeadTransformer",
     "HaltingPolicy",
     "ACTStats",
     "HaltingQTrainer",

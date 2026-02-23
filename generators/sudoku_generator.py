@@ -26,6 +26,7 @@ class Difficulty(Enum):
     EASY = "easy"
     MEDIUM = "medium"
     HARD = "hard"
+    MIXED = "mixed"
 
 
 class SudokuGenerator:
@@ -490,6 +491,12 @@ def generate_sudoku_dataset(
     difficulty_enum = Difficulty(difficulty.lower())
     generator = SudokuGenerator(grid_size=grid_size, seed=seed)
     
+    # For mixed difficulty, cycle through easy/medium/hard equally
+    if difficulty_enum == Difficulty.MIXED:
+        base_difficulties = [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD]
+    else:
+        base_difficulties = None
+    
     problems = []
     solutions = []
     metadata = []
@@ -501,7 +508,14 @@ def generate_sudoku_dataset(
     
     while generated < num_puzzles and attempts < max_attempts:
         attempts += 1
-        puzzle, solution = generator.create_puzzle(difficulty_enum)
+        
+        # Pick difficulty for this puzzle
+        if base_difficulties is not None:
+            current_diff = base_difficulties[generated % 3]
+        else:
+            current_diff = difficulty_enum
+        
+        puzzle, solution = generator.create_puzzle(current_diff)
         
         # Check uniqueness if required
         if ensure_unique:
@@ -518,7 +532,7 @@ def generate_sudoku_dataset(
         metadata.append({
             'puzzle_id': generated,
             'empty_cells': empty_cells,
-            'difficulty': difficulty,
+            'difficulty': current_diff.value,
             'backtracks': backtracks,
             'grid_size': grid_size
         })
@@ -631,9 +645,9 @@ Difficulty Levels (9x9):
     parser.add_argument(
         '--difficulty', '-d',
         type=str,
-        choices=['easy', 'medium', 'hard'],
+        choices=['easy', 'medium', 'hard', 'mixed'],
         default='medium',
-        help='Difficulty level (default: medium)'
+        help='Difficulty level (default: medium). "mixed" generates equal parts easy/medium/hard.'
     )
     parser.add_argument(
         '--seed',

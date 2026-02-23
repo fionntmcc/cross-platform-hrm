@@ -200,8 +200,15 @@ def generate_sudoku_data(
             'easy': Difficulty.EASY,
             'medium': Difficulty.MEDIUM,
             'hard': Difficulty.HARD,
+            'mixed': Difficulty.MIXED,
         }
         diff_enum = diff_map.get(difficulty, Difficulty.MEDIUM)
+        
+        # For mixed, cycle through easy/medium/hard
+        if diff_enum == Difficulty.MIXED:
+            cycle_diffs = [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD]
+        else:
+            cycle_diffs = None
         
         puzzles = []
         solutions = []
@@ -210,7 +217,8 @@ def generate_sudoku_data(
             if (i + 1) % 100 == 0:
                 print(f"  Generated {i + 1}/{num_samples}")
             
-            puzzle, solution = generator.create_puzzle(difficulty=diff_enum)
+            current_diff = cycle_diffs[i % 3] if cycle_diffs else diff_enum
+            puzzle, solution = generator.create_puzzle(difficulty=current_diff)
             puzzles.append(puzzle)
             solutions.append(solution)
         
@@ -224,14 +232,22 @@ def generate_sudoku_data(
         solutions = []
         
         # Map difficulty to number of clues
-        clues_map = {'easy': 10, 'medium': 8, 'hard': 6}
+        clues_map = {'easy': 10, 'medium': 8, 'hard': 6, 'mixed': None}
         num_clues = clues_map.get(difficulty, 8)
+        
+        # For mixed difficulty on 4x4, cycle through clue counts
+        mixed_clues = [10, 8, 6]  # easy, medium, hard
         
         for i in range(num_samples):
             if (i + 1) % 100 == 0:
                 print(f"  Generated {i + 1}/{num_samples}")
             
-            puzzle, solution = generate_puzzle(num_clues=num_clues)
+            if num_clues is None:  # mixed
+                current_clues = mixed_clues[i % 3]
+            else:
+                current_clues = num_clues
+            
+            puzzle, solution = generate_puzzle(num_clues=current_clues)
             puzzles.append(puzzle)
             solutions.append(solution)
         
@@ -656,8 +672,8 @@ def main():
     parser.add_argument('--num-samples', type=int, default=10000,
                         help='Number of samples to generate')
     parser.add_argument('--difficulty', type=str, default='medium',
-                        choices=['easy', 'medium', 'hard'],
-                        help='Puzzle difficulty')
+                        choices=['easy', 'medium', 'hard', 'mixed'],
+                        help='Puzzle difficulty ("mixed" = equal parts easy/medium/hard)')
     
     # Model arguments
     parser.add_argument('--hidden-size', type=int, default=256,

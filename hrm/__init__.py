@@ -22,7 +22,7 @@ from hrm.model import HRM_4x4, ExecutionTrace, create_hrm_4x4
 from hrm.model_simple import HRM_4x4_Simple, SimpleExecutionTrace, create_hrm_4x4_simple
 
 # Transformer-based HRM (Sapient-compatible)
-from hrm.model_transformer import (
+from hrm.prototype.model_transformer import (
     HRMTransformer,
     HRMTransformerConfig,
     create_hrm_transformer,

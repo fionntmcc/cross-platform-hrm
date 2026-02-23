@@ -35,6 +35,7 @@ from hrm.core.iteration_outer import (
 from hrm.core.halting import (
     # Q-learning halting head
     QHaltingHead,
+    QHaltingHeadTransformer,  # Sapient-compatible
     # Halting policy
     HaltingPolicy,
     # Statistics
@@ -62,6 +63,7 @@ __all__ = [
     "OuterLoopStats",
     # ACT Extension - Adaptive Computation Time
     "QHaltingHead",
+    "QHaltingHeadTransformer",
     "HaltingPolicy",
     "ACTStats",
     "HaltingQTrainer",

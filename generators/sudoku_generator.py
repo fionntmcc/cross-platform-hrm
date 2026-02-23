@@ -11,16 +11,14 @@ Usage:
     python sudoku_generator.py --num 100 --size 9 --difficulty medium --seed 42
 """
 
-import argparse
-import math
 import random
-from enum import Enum
+import math
+import argparse
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any
+from enum import Enum
 
 import numpy as np
-
-from hrm.data.validator import is_valid_placement
 
 
 class Difficulty(Enum):
@@ -105,7 +103,7 @@ class SudokuGenerator:
         self._rng.shuffle(numbers)
         
         for num in numbers:
-            if is_valid_placement(grid, row, col, num):
+            if self._is_valid_placement(grid, row, col, num):
                 grid[row][col] = num
                 if self._fill_grid(grid):
                     return True
@@ -120,6 +118,39 @@ class SudokuGenerator:
                 if grid[row][col] == 0:
                     return (row, col)
         return None
+    
+    def _is_valid_placement(self, grid: List[List[int]], row: int, col: int, num: int) -> bool:
+        """
+        Check if placing num at (row, col) is valid according to Sudoku rules.
+        
+        Args:
+            grid: The current grid state.
+            row: Row index.
+            col: Column index.
+            num: Number to place.
+            
+        Returns:
+            True if placement is valid, False otherwise.
+        """
+        # Check row
+        if num in grid[row]:
+            return False
+        
+        # Check column
+        for r in range(self.grid_size):
+            if grid[r][col] == num:
+                return False
+        
+        # Check box
+        box_row_start = (row // self.box_size) * self.box_size
+        box_col_start = (col // self.box_size) * self.box_size
+        
+        for r in range(box_row_start, box_row_start + self.box_size):
+            for c in range(box_col_start, box_col_start + self.box_size):
+                if grid[r][c] == num:
+                    return False
+        
+        return True
     
     def create_puzzle(self, difficulty: Difficulty = Difficulty.MEDIUM) -> Tuple[List[List[int]], List[List[int]]]:
         """
@@ -275,7 +306,7 @@ class SudokuGenerator:
             row, col = empty_cell
             
             for num in range(1, self.grid_size + 1):
-                if is_valid_placement(grid, row, col, num):
+                if self._is_valid_placement(grid, row, col, num):
                     grid[row][col] = num
                     solve(grid)
                     if solutions[0] > 1:
@@ -310,7 +341,7 @@ class SudokuGenerator:
             row, col = empty_cell
             
             for num in range(1, self.grid_size + 1):
-                if is_valid_placement(grid, row, col, num):
+                if self._is_valid_placement(grid, row, col, num):
                     grid[row][col] = num
                     if solve(grid):
                         return True

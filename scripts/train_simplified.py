@@ -329,13 +329,21 @@ def train_epoch(
     use_amp: bool = False,
     constraint_weight: float = 0.0,
     label_smoothing: float = 0.0,
+    accum_steps: int = 1,
 ) -> Dict[str, float]:
-    """Train for one epoch. Loss = final-step CE only (paper-aligned)."""
+    """Train for one epoch. Loss = final-step CE only (paper-aligned).
+
+    Supports gradient accumulation: when accum_steps > 1, gradients are
+    averaged over accum_steps mini-batches before each optimizer step.
+    This simulates a larger effective batch size without extra VRAM.
+    """
     model.train()
     total_loss = 0.0
     total_lm_loss = 0.0
     total_correct = 0
     total_tokens = 0
+
+    optimizer.zero_grad(set_to_none=True)
 
     for batch_idx, batch in enumerate(dataloader):
         inputs = batch['input'].to(device, non_blocking=True)
@@ -345,14 +353,10 @@ def train_epoch(
         if empty_mask is not None:
             empty_mask = empty_mask.to(device, non_blocking=True)
 
-        optimizer.zero_grad(set_to_none=True)
-
         with torch.amp.autocast('cuda', enabled=use_amp):
             output = model(inputs, puzzle_type, targets=targets)
 
-            # FIX 5: Always final-step loss only (paper-aligned).
-            # The paper does NOT use deep supervision — only the final
-            # step's logits are used for cross-entropy.
+            # Final-step loss only (paper-aligned: no deep supervision)
             lm_loss = compute_masked_loss(
                 output['logits'], targets, empty_mask,
                 label_smoothing=label_smoothing,
@@ -367,16 +371,26 @@ def train_epoch(
                 )
                 loss = loss + constraint_weight * constraint_loss
 
+            # Scale loss by accumulation steps so gradients average
+            # correctly over the effective batch
+            loss = loss / accum_steps
+
         if scaler is not None:
             scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            scaler.step(optimizer)
-            scaler.update()
         else:
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
+
+        # Step optimizer every accum_steps mini-batches (or at end of epoch)
+        if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == len(dataloader):
+            if scaler is not None:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
 
         # Statistics — accuracy on empty cells only
         predictions = output['predictions']
@@ -387,15 +401,13 @@ def train_epoch(
             total_correct += (predictions == targets).sum().item()
             total_tokens += targets.numel()
 
-        total_loss += loss.item() * inputs.size(0)
-        total_lm_loss += lm_loss.item() * inputs.size(0)
-
-        # FIX 6: Removed dead output['deep_supervision_loss'] tracking
-        # (model never outputs this key)
+        # Undo the /accum_steps scaling for logging
+        total_loss += (loss.item() * accum_steps) * inputs.size(0)
+        total_lm_loss += (lm_loss.item()) * inputs.size(0)
 
         if (batch_idx + 1) % 50 == 0:
             print(f"  Batch {batch_idx + 1}/{len(dataloader)}, "
-                  f"Loss: {loss.item():.4f}")
+                  f"Loss: {lm_loss.item():.4f}")
 
     n = len(dataloader.dataset)
     return {
@@ -468,6 +480,7 @@ def train(
     use_compile: bool = False,
     constraint_weight: float = 0.0,
     label_smoothing: float = 0.0,
+    accum_steps: int = 1,
 ) -> Dict:
     """Main training loop with optional mixed-precision and torch.compile."""
     print(f"\nTraining on {device}")
@@ -527,6 +540,7 @@ def train(
             scaler=scaler, use_amp=use_amp,
             constraint_weight=constraint_weight,
             label_smoothing=label_smoothing,
+            accum_steps=accum_steps,
         )
         history['train_loss'].append(train_metrics['loss'])
         history['train_accuracy'].append(train_metrics['accuracy'])
@@ -633,7 +647,9 @@ def main():
     parser.add_argument('--epochs', type=int, default=100,
                         help='Number of training epochs (paper: 100)')
     parser.add_argument('--batch-size', type=int, default=64,           # Practical default
-                        help='Batch size')
+                        help='Batch size (physical, fits in VRAM)')
+    parser.add_argument('--accum-steps', type=int, default=1,
+                        help='Gradient accumulation steps (effective batch = batch-size * accum-steps)')
     parser.add_argument('--lr', type=float, default=3e-4,               # FIX 3: was 1e-4
                         help='Learning rate (paper: 3e-4)')
     parser.add_argument('--weight-decay', type=float, default=0.1,      # FIX 2: new arg
@@ -787,6 +803,17 @@ def main():
     if args.amp and not device.type == 'cuda':
         print("Warning: --amp ignored (only supported on CUDA devices)")
 
+    # Effective batch size info
+    effective_batch = args.batch_size * args.accum_steps
+    n_total = len(dataset)
+    coverage = min(effective_batch / n_total, 1.0)
+    print(f"\nBatch config:")
+    print(f"  Physical batch   : {args.batch_size}")
+    print(f"  Accum steps      : {args.accum_steps}x")
+    print(f"  Effective batch  : {effective_batch}")
+    print(f"  Coverage/step    : {coverage:.1%} of dataset")
+    print(f"  (Paper reference : 230% coverage with batch 2304 / 1000 samples)")
+
     # Train
     history = train(
         model=model,
@@ -802,6 +829,7 @@ def main():
         use_compile=args.compile,
         constraint_weight=args.constraint_weight,
         label_smoothing=args.label_smoothing,
+        accum_steps=args.accum_steps,
     )
 
     print("\nTraining complete!")

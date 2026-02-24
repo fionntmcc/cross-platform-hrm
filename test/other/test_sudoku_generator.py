@@ -2,16 +2,10 @@
 Tests for the Sudoku puzzle generator module.
 """
 import pytest
-import sys
 import tempfile
 import os
-from pathlib import Path
 
 import numpy as np
-
-# Add project root to path for imports
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from generators.sudoku_generator import (
     SudokuGenerator,
@@ -761,10 +755,10 @@ class TestSaveDataset:
             # Check npz file exists
             assert os.path.exists(f'{prefix}.npz')
             
-            # Verify contents
-            loaded = np.load(f'{prefix}.npz')
-            np.testing.assert_array_equal(loaded['problems'], dataset['problems'])
-            np.testing.assert_array_equal(loaded['solutions'], dataset['solutions'])
+            # Verify contents (use context manager to close file handle on Windows)
+            with np.load(f'{prefix}.npz') as loaded:
+                np.testing.assert_array_equal(loaded['problems'], dataset['problems'])
+                np.testing.assert_array_equal(loaded['solutions'], dataset['solutions'])
 
     def test_save_dataset_npy(self):
         """Test saving dataset in npy format."""
@@ -849,20 +843,19 @@ class TestDatasetIntegration:
             prefix = os.path.join(tmpdir, 'sudoku_4x4')
             save_dataset(dataset, prefix, save_format='npz')
             
-            # Load and verify
-            loaded = np.load(f'{prefix}.npz')
-            
-            assert loaded['problems'].shape == (10, 4, 4)
-            assert loaded['solutions'].shape == (10, 4, 4)
-            
-            # Verify each puzzle/solution pair
-            gen = SudokuGenerator(grid_size=4)
-            for i in range(10):
-                puzzle = loaded['problems'][i].tolist()
-                solution = loaded['solutions'][i].tolist()
+            # Load and verify (use context manager to close file handle on Windows)
+            with np.load(f'{prefix}.npz') as loaded:
+                assert loaded['problems'].shape == (10, 4, 4)
+                assert loaded['solutions'].shape == (10, 4, 4)
                 
-                assert gen.is_valid_grid(puzzle)
-                assert gen.is_complete_grid(solution)
+                # Verify each puzzle/solution pair
+                gen = SudokuGenerator(grid_size=4)
+                for i in range(10):
+                    puzzle = loaded['problems'][i].tolist()
+                    solution = loaded['solutions'][i].tolist()
+                    
+                    assert gen.is_valid_grid(puzzle)
+                    assert gen.is_complete_grid(solution)
 
     def test_full_workflow_9x9(self):
         """Test complete workflow: generate, save, load for 9x9."""
@@ -880,11 +873,10 @@ class TestDatasetIntegration:
             prefix = os.path.join(tmpdir, 'sudoku_9x9')
             save_dataset(dataset, prefix, save_format='npz')
             
-            # Load and verify
-            loaded = np.load(f'{prefix}.npz')
-            
-            assert loaded['problems'].shape == (5, 9, 9)
-            assert loaded['solutions'].shape == (5, 9, 9)
+            # Load and verify (use context manager to close file handle on Windows)
+            with np.load(f'{prefix}.npz') as loaded:
+                assert loaded['problems'].shape == (5, 9, 9)
+                assert loaded['solutions'].shape == (5, 9, 9)
 
 
 class TestUniqueness:

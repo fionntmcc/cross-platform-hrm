@@ -79,7 +79,7 @@ known-first-party = ["hrm"]
 # Pytest Configuration
 # =============================================================================
 [tool.pytest.ini_options]
-testpaths = ["test/hrm_test"]
+testpaths = ["test/hrm_test", "test/other"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

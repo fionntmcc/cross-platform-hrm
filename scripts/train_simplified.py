@@ -1,7 +1,7 @@
 """
-Training Script for L-Module Only HRM (Ge et al. 2025)
+Training Script for Simplified HRM (L-Module Only)
 
-This script trains the LModuleOnlyHRM model — a simplified HRM that
+This script trains the SimplifiedHRM model — a simplified HRM that
 eliminates the H-module entirely, using an expanded 8-layer transformer
 as the sole reasoning engine.
 
@@ -17,20 +17,20 @@ Key differences from train_unified.py:
 
 Usage:
     # Paper-aligned: 1K hard puzzles, 100 epochs, lr=3e-4, wd=0.1
-    python train_ge2025.py --puzzle sudoku_9x9 --generate-data \\
+    python train_simplified.py --puzzle sudoku_9x9 --generate-data \\
         --num-samples 1000 --difficulty hard --epochs 100
 
     # Augmented: more data for potentially better results
-    python train_ge2025.py --puzzle sudoku_9x9 --generate-data \\
+    python train_simplified.py --puzzle sudoku_9x9 --generate-data \\
         --num-samples 50000 --difficulty medium --epochs 150 \\
         --batch-size 64 --amp \\
         --data-output-path data/sudoku_9x9_medium_50k.npz
 
     # Train on 4x4 Sudoku
-    python train_ge2025.py --puzzle sudoku_4x4 --epochs 50
+    python train_simplified.py --puzzle sudoku_4x4 --epochs 50
 
     # Small model for quick experiments / RPi5
-    python train_ge2025.py --puzzle sudoku_4x4 --hidden-size 128 \\
+    python train_simplified.py --puzzle sudoku_4x4 --hidden-size 128 \\
         --num-layers 4 --reasoning-steps 8
 """
 
@@ -51,13 +51,13 @@ from torch.utils.data import DataLoader, Dataset
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from hrm.model_ge2025 import (
-    LModuleOnlyHRM,
-    LModuleOnlyConfig,
+from hrm.model_simplified import (
+    SimplifiedHRM,
+    SimplifiedHRMConfig,
     PuzzleType,
     PUZZLE_DEFAULTS,
-    create_lmodule_only_hrm,
-    create_small_lmodule_hrm,
+    create_simplified_hrm,
+    create_small_simplified_hrm,
 )
 
 
@@ -320,7 +320,7 @@ def sudoku_constraint_penalty(
 
 
 def train_epoch(
-    model: LModuleOnlyHRM,
+    model: SimplifiedHRM,
     dataloader: DataLoader,
     optimizer: optim.Optimizer,
     device: torch.device,
@@ -407,7 +407,7 @@ def train_epoch(
 
 @torch.no_grad()
 def evaluate(
-    model: LModuleOnlyHRM,
+    model: SimplifiedHRM,
     dataloader: DataLoader,
     device: torch.device,
 ) -> Dict[str, float]:
@@ -455,7 +455,7 @@ def evaluate(
 
 
 def train(
-    model: LModuleOnlyHRM,
+    model: SimplifiedHRM,
     train_loader: DataLoader,
     val_loader: Optional[DataLoader],
     epochs: int,
@@ -556,7 +556,7 @@ def train(
 
             if improved:
                 patience_counter = 0
-                save_path = os.path.join(save_dir, f'ge2025_hrm_{puzzle_name}_best.pt')
+                save_path = os.path.join(save_dir, f'simplified_hrm_{puzzle_name}_best.pt')
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
@@ -574,7 +574,7 @@ def train(
         scheduler.step()
 
     # Save final model
-    save_path = os.path.join(save_dir, f'ge2025_hrm_{puzzle_name}_final.pt')
+    save_path = os.path.join(save_dir, f'simplified_hrm_{puzzle_name}_final.pt')
     torch.save({
         'epoch': epochs,
         'model_state_dict': model.state_dict(),
@@ -583,7 +583,7 @@ def train(
     print(f"\nSaved final model to {save_path}")
 
     # Save history
-    history_path = os.path.join(save_dir, f'training_history_ge2025_{puzzle_name}.json')
+    history_path = os.path.join(save_dir, f'training_history_simplified_{puzzle_name}.json')
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)
 
@@ -596,7 +596,7 @@ def train(
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Train L-Module Only HRM (Ge et al. 2025)'
+        description='Train Simplified HRM (L-Module Only)'
     )
 
     # Data arguments
@@ -627,7 +627,7 @@ def main():
     parser.add_argument('--no-feedback', action='store_true',
                         help='Disable prediction feedback / self-conditioning')
     parser.add_argument('--small', action='store_true',
-                        help='Use small model config (128d, 4L, 8 steps) for quick experiments')
+                        help='Use small model config (128d, 4L, 8 steps) for quick experiments / RPi5')
 
     # Training arguments
     parser.add_argument('--epochs', type=int, default=100,
@@ -760,21 +760,21 @@ def main():
 
     # Create model
     if args.small:
-        model = create_small_lmodule_hrm(
+        model = create_small_simplified_hrm(
             use_prediction_feedback=not args.no_feedback,
         )
         print("\nUsing SMALL model configuration (for quick experiments / RPi5)")
     else:
-        config = LModuleOnlyConfig(
+        config = SimplifiedHRMConfig(
             hidden_size=args.hidden_size,
             num_heads=args.num_heads,
             num_layers=args.num_layers,
             num_reasoning_steps=args.reasoning_steps,
             use_prediction_feedback=not args.no_feedback,
         )
-        model = LModuleOnlyHRM(config)
+        model = SimplifiedHRM(config)
 
-    print(f"\nModel Config (Ge et al. 2025 — L-Module Only):")
+    print(f"\nModel Config (Simplified HRM — L-Module Only):")
     print(f"  Hidden size: {model.config.hidden_size}")
     print(f"  Num heads: {model.config.num_heads}")
     print(f"  Num layers (L-only): {model.config.num_layers}")

@@ -1,0 +1,69 @@
+name: Publish Model Release
+
+# Triggered when a version tag is pushed (e.g. git tag v1.0.0 && git push --tags).
+# This workflow creates the GitHub Release shell.
+# Model files are attached separately using the gh CLI (see below).
+#
+# Full release workflow:
+#   1. Train locally:
+#        python scripts/train_simplified.py --puzzle sudoku_4x4 --epochs 100 ...
+#        python scripts/train_simplified.py --puzzle sudoku_9x9 --epochs 100 ...
+#   2. Tag the commit:
+#        git tag v1.0.0 -m "Release v1.0.0"
+#        git push origin v1.0.0
+#      → This workflow runs and creates the draft release.
+#   3. Upload model files:
+#        gh release upload v1.0.0 model/*.pt model/*.json
+#   4. Publish the release:
+#        gh release edit v1.0.0 --draft=false
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract release notes from tag annotation
+        id: tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          # Pull annotation message if it's an annotated tag
+          MSG=$(git tag -l --format='%(contents)' "${TAG}" || echo "")
+          if [ -z "$MSG" ]; then
+            MSG="Trained model release ${TAG}."
+          fi
+          {
+            echo "notes<<EOF"
+            echo "$MSG"
+            echo ""
+            echo "## Models"
+            echo "Download with:"
+            echo '```bash'
+            echo "python scripts/download_model.py --tag ${TAG}"
+            echo '```'
+            echo "or:"
+            echo '```bash'
+            echo "gh release download ${TAG} --dir model/"
+            echo '```'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "Model Release ${{ steps.tag.outputs.tag }}" \
+            --notes "${{ steps.tag.outputs.notes }}" \
+            --draft

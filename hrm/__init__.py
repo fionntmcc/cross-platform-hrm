@@ -18,7 +18,7 @@ __author__ = "Fionn McCarthy, Kyrylo Kozlovskyi"
 # Issue #8: Complete HRM Model
 from hrm.model import HRM_4x4, ExecutionTrace, create_hrm_4x4
 
-# Simplified L-Module Only Variant (Ge et al. 2025)
+# Simplified L-Module Only Variant
 from hrm.model_simple import HRM_4x4_Simple, SimpleExecutionTrace, create_hrm_4x4_simple
 
 # Transformer-based HRM (Sapient-compatible)
@@ -34,6 +34,21 @@ from hrm.model_unified import (
     UnifiedHRMConfig,
     PuzzleType,
     create_unified_hrm,
+)
+
+# Simplified HRM — L-Module Only (Ge et al. 2025)
+from hrm.model_simplified import (
+    SimplifiedHRM,
+    SimplifiedHRMConfig,
+    PuzzleType as SimplifiedPuzzleType,
+    PUZZLE_DEFAULTS,
+    create_simplified_hrm,
+    create_small_simplified_hrm,
+    # Backward-compatible aliases
+    LModuleOnlyHRM,
+    LModuleOnlyConfig,
+    create_lmodule_only_hrm,
+    create_small_lmodule_hrm,
 )
 
 # Layers - Neural Network Components
@@ -59,6 +74,9 @@ from hrm.layers import (
     OutputNetwork,
     create_output_network,
     OutputNetworkTransformer,
+    # Simplified HRM (L-Module Only)
+    InputEmbedding,
+    OutputHead,
     # Transformer Building Blocks
     SwiGLU,
     RotaryEmbedding,
@@ -100,7 +118,7 @@ __all__ = [
     "HRM_4x4",
     "ExecutionTrace",
     "create_hrm_4x4",
-    # Simplified L-Module Only Variant (Ge et al. 2025)
+    # Simplified L-Module Only Variant
     "HRM_4x4_Simple",
     "SimpleExecutionTrace",
     "create_hrm_4x4_simple",
@@ -113,6 +131,18 @@ __all__ = [
     "UnifiedHRMConfig",
     "PuzzleType",
     "create_unified_hrm",
+    # Simplified HRM — L-Module Only (Ge et al. 2025)
+    "SimplifiedHRM",
+    "SimplifiedHRMConfig",
+    "SimplifiedPuzzleType",
+    "PUZZLE_DEFAULTS",
+    "create_simplified_hrm",
+    "create_small_simplified_hrm",
+    # Backward-compatible aliases
+    "LModuleOnlyHRM",
+    "LModuleOnlyConfig",
+    "create_lmodule_only_hrm",
+    "create_small_lmodule_hrm",
     # Normalisation (Issue #1)
     "RMSNorm",
     "RMSNormWithBias",
@@ -134,6 +164,9 @@ __all__ = [
     "OutputNetwork",
     "create_output_network",
     "OutputNetworkTransformer",
+    # Simplified HRM layers
+    "InputEmbedding",
+    "OutputHead",
     # Transformer Building Blocks
     "SwiGLU",
     "RotaryEmbedding",

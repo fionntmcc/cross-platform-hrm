@@ -1,5 +1,5 @@
 """
-L-Module Only HRM — Aligned with Ge et al. (2025)
+Simplified HRM — L-Module Only (Ge et al. 2025)
 
 "Hierarchical Reasoning Models: Perspectives and Misconceptions"
 (arXiv:2510.00355v2, Ge, Liao & Poggio, MIT CBMM)
@@ -43,14 +43,14 @@ One-Step Gradient — How It Works:
     The key insight is that "one-step gradient" does NOT mean "only the
     last step has gradients". It means: at each step, gradients flow
     through ONE application of f_L (not through the entire recurrence).
-    
+
     In the official HRM (model_unified._inner_forward):
         - Each outer step runs an inner loop of H×L iterations
         - All but the LAST inner iteration run in no_grad
         - The LAST inner iteration runs WITH gradients
         - Logits from that outer step have gradient through one f_L call
         - States are detached before the next outer step
-    
+
     For L-module only with L_cycles=1 (this model):
         - The inner loop has only 1 step, so it always has gradients
         - Each reasoning step = one f_L call WITH gradients
@@ -63,8 +63,8 @@ Reference:
     Perspectives and Misconceptions. arXiv:2510.00355v2.
 
 Usage:
-    >>> from hrm.model_ge2025 import LModuleOnlyHRM, LModuleOnlyConfig
-    >>> model = LModuleOnlyHRM()
+    >>> from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType
+    >>> model = SimplifiedHRM()
     >>> puzzle = torch.randint(0, 10, (8, 81))  # batch of 8, 9x9 Sudoku
     >>> output = model(puzzle, PuzzleType.SUDOKU_9X9, targets=solution)
     >>> loss = output['loss']
@@ -73,19 +73,18 @@ Usage:
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional, Dict, Any, List
-import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from hrm.layers.norm import rms_norm
 from hrm.layers.transformer import (
     RotaryEmbedding,
     ReasoningModule,
-    CastedLinear,
     trunc_normal_init_,
 )
+from hrm.layers.input_simplified import InputEmbedding
+from hrm.layers.output_simplified import OutputHead
 
 
 # ---------------------------------------------------------------------------
@@ -110,9 +109,9 @@ PUZZLE_DEFAULTS = {
 # Configuration
 # ---------------------------------------------------------------------------
 @dataclass
-class LModuleOnlyConfig:
+class SimplifiedHRMConfig:
     """
-    Configuration for the L-module only HRM (Ge et al. 2025 variant).
+    Configuration for the Simplified HRM (L-module only variant).
 
     The key difference from the full HRM is the absence of the H-module.
     All computation budget goes into the L-module transformer, which is
@@ -150,128 +149,11 @@ class LModuleOnlyConfig:
 
 
 # ---------------------------------------------------------------------------
-# Input Network
-# ---------------------------------------------------------------------------
-class InputEmbedding(nn.Module):
-    """
-    Token + puzzle-type embedding network.
-
-    Converts token sequences to hidden representations. Puzzle-type
-    embedding enables multi-task learning across Sudoku sizes and mazes.
-    """
-
-    def __init__(self, config: LModuleOnlyConfig):
-        super().__init__()
-        self.config = config
-
-        # Token embedding
-        self.tok_emb = nn.Embedding(config.vocab_size, config.hidden_size)
-
-        # Puzzle type embedding for multi-task
-        self.puzzle_emb = nn.Embedding(
-            config.num_puzzle_types, config.hidden_size
-        )
-
-        # Input projection (linear, no bias — matches Sapient)
-        self.input_proj = nn.Linear(
-            config.hidden_size, config.hidden_size, bias=False
-        )
-
-        self.dropout = nn.Dropout(config.dropout)
-
-        # Initialise
-        embed_std = 1.0 / math.sqrt(config.hidden_size)
-        trunc_normal_init_(self.tok_emb.weight, std=embed_std)
-        trunc_normal_init_(self.puzzle_emb.weight, std=embed_std)
-        trunc_normal_init_(self.input_proj.weight, std=embed_std)
-
-    def forward(
-        self,
-        x: torch.Tensor,
-        puzzle_type: PuzzleType,
-    ) -> torch.Tensor:
-        """
-        Embed tokens with puzzle-type context.
-
-        Args:
-            x: Token indices (batch, seq_len).
-            puzzle_type: Type of puzzle being solved.
-
-        Returns:
-            Hidden states (batch, seq_len, hidden_size).
-        """
-        h = self.tok_emb(x)
-
-        # Add puzzle type embedding (broadcast to all positions)
-        puzzle_idx = torch.tensor(
-            [puzzle_type.value - 1], device=x.device, dtype=torch.long
-        )
-        h = h + self.puzzle_emb(puzzle_idx).unsqueeze(0)
-
-        # Scale by sqrt(d) for stable training
-        h = h * math.sqrt(self.config.hidden_size)
-
-        h = self.input_proj(h)
-        h = self.dropout(h)
-        return h
-
-
-# ---------------------------------------------------------------------------
-# Output Network
-# ---------------------------------------------------------------------------
-class OutputHead(nn.Module):
-    """
-    Puzzle-specific LM heads for converting hidden states to logits.
-
-    Separate linear projections per puzzle type handle different vocab
-    sizes without wasting capacity on unused output dimensions.
-    """
-
-    def __init__(self, config: LModuleOnlyConfig):
-        super().__init__()
-        self.config = config
-
-        # One head per puzzle type
-        self.heads = nn.ModuleDict({
-            'sudoku_4x4': nn.Linear(config.hidden_size, 5, bias=False),
-            'sudoku_9x9': nn.Linear(config.hidden_size, 10, bias=False),
-            'maze': nn.Linear(config.hidden_size, 4, bias=False),
-        })
-
-        # Initialise
-        head_std = 1.0 / math.sqrt(config.hidden_size)
-        for head in self.heads.values():
-            trunc_normal_init_(head.weight, std=head_std)
-
-    def forward(
-        self,
-        h: torch.Tensor,
-        puzzle_type: PuzzleType,
-    ) -> torch.Tensor:
-        """
-        Project to vocabulary logits.
-
-        Args:
-            h: Hidden states (batch, seq_len, hidden_size).
-            puzzle_type: Puzzle type for head selection.
-
-        Returns:
-            Logits (batch, seq_len, vocab_size).
-        """
-        if puzzle_type == PuzzleType.SUDOKU_4X4:
-            return self.heads['sudoku_4x4'](h)
-        elif puzzle_type == PuzzleType.SUDOKU_9X9:
-            return self.heads['sudoku_9x9'](h)
-        else:
-            return self.heads['maze'](h)
-
-
-# ---------------------------------------------------------------------------
 # Main Model
 # ---------------------------------------------------------------------------
-class LModuleOnlyHRM(nn.Module):
+class SimplifiedHRM(nn.Module):
     """
-    L-Module Only HRM (Ge et al. 2025 variant).
+    Simplified HRM — L-Module Only (Ge et al. 2025).
 
     Eliminates the H-module entirely, using an expanded 8-layer
     transformer as the sole reasoning engine. This matches the paper's
@@ -293,11 +175,18 @@ class LModuleOnlyHRM(nn.Module):
     Loss is computed from the FINAL step's logits only, matching the
     official HRM's training procedure (model_unified.py line 535).
 
+    Components (split across modules):
+        - InputEmbedding (hrm.layers.input_simplified): Token + puzzle-type
+          embedding
+        - ReasoningModule (hrm.layers.transformer): 8-layer Transformer with
+          weight sharing across reasoning steps
+        - OutputHead (hrm.layers.output_simplified): Puzzle-specific LM heads
+
     Args:
-        config: LModuleOnlyConfig with model hyperparameters.
+        config: SimplifiedHRMConfig with model hyperparameters.
 
     Example:
-        >>> model = LModuleOnlyHRM()
+        >>> model = SimplifiedHRM()
         >>>
         >>> # 9x9 Sudoku
         >>> puzzle = torch.randint(0, 10, (4, 81))
@@ -311,14 +200,14 @@ class LModuleOnlyHRM(nn.Module):
         >>> predictions = output_4['predictions']
     """
 
-    def __init__(self, config: Optional[LModuleOnlyConfig] = None):
+    def __init__(self, config: Optional[SimplifiedHRMConfig] = None):
         super().__init__()
 
-        self.config = config or LModuleOnlyConfig()
+        self.config = config or SimplifiedHRMConfig()
         cfg = self.config
 
         # =================================================================
-        # Input Embedding
+        # Input Embedding (hrm.layers.input_simplified)
         # =================================================================
         self.input_net = InputEmbedding(cfg)
 
@@ -348,7 +237,7 @@ class LModuleOnlyHRM(nn.Module):
         )
 
         # =================================================================
-        # Output Head (puzzle-specific)
+        # Output Head (hrm.layers.output_simplified)
         # =================================================================
         self.output_head = OutputHead(cfg)
 
@@ -393,16 +282,12 @@ class LModuleOnlyHRM(nn.Module):
                   through one application of reasoning + output_head
         """
         # One application of f_L WITH gradients
-        # This is the "one-step" — gradients flow through this single
-        # call but not through the recurrence (z_L was detached).
         z_L = self.reasoning(z_L, z_input, cos_sin=cos_sin)
 
         # Compute logits (has gradient through reasoning + output_head)
         logits = self.output_head(z_L, puzzle_type)
 
         # Detach carry for next step (no BPTT across steps)
-        # Matches model_unified._inner_forward line 418:
-        #   return z_H.detach(), z_L.detach(), logits, ...
         return z_L.detach(), logits
 
     def forward(
@@ -468,13 +353,13 @@ class LModuleOnlyHRM(nn.Module):
         # =================================================================
         # Step 5: Iterative reasoning with one-step gradient
         # =================================================================
-        # Each step mirrors one call to model_unified._inner_forward:
+        # Each step:
         #   1. z_L enters detached (no BPTT across steps)
         #   2. f_L runs WITH gradients (one-step gradient)
         #   3. logits have full gradient through reasoning + output_head
         #   4. z_L is detached for next step's carry
         #
-        # This is equivalent to LCM training (Ge et al. Section 3.1):
+        # Equivalent to LCM training (Ge et al. Section 3.1):
         # the model learns to map each intermediate state to the solution
         # independently, without backpropagating through the chain.
         # =================================================================
@@ -491,8 +376,6 @@ class LModuleOnlyHRM(nn.Module):
                 )
             else:
                 # Intermediate steps: no gradients needed.
-                # Matches model_unified._inner_forward which runs all
-                # but the last L-step inside torch.no_grad().
                 # Without this, N reasoning steps retain N separate
                 # autograd graphs (one per step), causing O(N*L) memory
                 # instead of O(L).
@@ -530,16 +413,10 @@ class LModuleOnlyHRM(nn.Module):
         }
 
         # =================================================================
-        # Step 7: Loss computation
+        # Step 7: Loss computation — final step only (paper-aligned)
         # =================================================================
-        # Matches official HRM: lm_loss from FINAL step only.
-        # (model_unified.py line 535)
-        #
-        # Note: the official HRM does NOT use deep supervision for LM
-        # loss — it only uses the final outer step's logits for cross-
-        # entropy. The intermediate logits are used for Q-learning
-        # (halting), which we omit since Ge et al. showed ACT provides
-        # no inference benefit.
+        # The official HRM does NOT use deep supervision for LM loss —
+        # it only uses the final outer step's logits for cross-entropy.
         # =================================================================
         if targets is not None:
             lm_loss = F.cross_entropy(
@@ -646,17 +523,26 @@ class LModuleOnlyHRM(nn.Module):
 
 
 # ---------------------------------------------------------------------------
+# Backward-compatible aliases
+# ---------------------------------------------------------------------------
+# These allow existing code and checkpoints using the old names to keep
+# working without changes to import statements.
+LModuleOnlyHRM = SimplifiedHRM
+LModuleOnlyConfig = SimplifiedHRMConfig
+
+
+# ---------------------------------------------------------------------------
 # Factory functions
 # ---------------------------------------------------------------------------
-def create_lmodule_only_hrm(
+def create_simplified_hrm(
     hidden_size: int = 256,
     num_heads: int = 4,
     num_layers: int = 8,
     num_reasoning_steps: int = 16,
     **kwargs,
-) -> LModuleOnlyHRM:
+) -> SimplifiedHRM:
     """
-    Create an L-module only HRM (Ge et al. 2025 variant).
+    Create a Simplified HRM (L-module only).
 
     Default configuration matches the paper's 8-layer L-module only
     setting with 16 reasoning steps.
@@ -669,27 +555,27 @@ def create_lmodule_only_hrm(
         **kwargs: Additional config overrides.
 
     Returns:
-        Configured LModuleOnlyHRM model.
+        Configured SimplifiedHRM model.
     """
-    config = LModuleOnlyConfig(
+    config = SimplifiedHRMConfig(
         hidden_size=hidden_size,
         num_heads=num_heads,
         num_layers=num_layers,
         num_reasoning_steps=num_reasoning_steps,
         **kwargs,
     )
-    return LModuleOnlyHRM(config)
+    return SimplifiedHRM(config)
 
 
-def create_small_lmodule_hrm(**kwargs) -> LModuleOnlyHRM:
+def create_small_simplified_hrm(**kwargs) -> SimplifiedHRM:
     """
-    Create a smaller L-module only HRM for quick experiments / RPi5.
+    Create a small Simplified HRM for quick experiments / RPi5.
 
     Reduced dimensions for faster training and lower memory footprint,
     suitable for 4x4 Sudoku and Raspberry Pi deployment.
 
     Returns:
-        Small LModuleOnlyHRM model (~1-2M parameters).
+        Small SimplifiedHRM model (~1-2M parameters).
     """
     defaults = dict(
         hidden_size=128,
@@ -701,4 +587,9 @@ def create_small_lmodule_hrm(**kwargs) -> LModuleOnlyHRM:
         dropout=0.1,
     )
     defaults.update(kwargs)
-    return create_lmodule_only_hrm(**defaults)
+    return create_simplified_hrm(**defaults)
+
+
+# Backward-compatible aliases for factory functions
+create_lmodule_only_hrm = create_simplified_hrm
+create_small_lmodule_hrm = create_small_simplified_hrm

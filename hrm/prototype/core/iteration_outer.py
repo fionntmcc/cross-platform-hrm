@@ -38,7 +38,7 @@ from typing import Optional, List, Tuple
 import torch
 import torch.nn as nn
 
-from hrm.core.iteration import (
+from hrm.prototype.core.iteration import (
     fixed_point_iteration,
     IterationStats,
     compute_residual,

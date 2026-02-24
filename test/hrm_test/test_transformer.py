@@ -11,28 +11,24 @@ Run: pytest test/hrm_test/test_transformer.py -v
 """
 
 import pytest
-import math
 import torch
-import torch.nn as nn
 
 from hrm.layers.transformer import (
+    Attention,
+    ReasoningModule,
     RotaryEmbedding,
     SwiGLU,
-    Attention,
     TransformerBlock,
-    ReasoningModule,
     trunc_normal_init_,
-    apply_rotary_pos_emb,
 )
-
 
 # =============================================================================
 # Shared constants
 # =============================================================================
 
-HIDDEN = 64    # Small hidden dim for fast tests
+HIDDEN = 64  # Small hidden dim for fast tests
 N_HEADS = 4
-HEAD_DIM = HIDDEN // N_HEADS   # 16
+HEAD_DIM = HIDDEN // N_HEADS  # 16
 SEQ_LEN = 16
 BATCH = 4
 
@@ -40,6 +36,7 @@ BATCH = 4
 # =============================================================================
 # RotaryEmbedding
 # =============================================================================
+
 
 class TestRotaryEmbedding:
 
@@ -59,7 +56,7 @@ class TestRotaryEmbedding:
 
     def test_different_dim(self):
         rope = RotaryEmbedding(dim=32, max_position_embeddings=64)
-        cos, sin = rope()
+        cos, _ = rope()
         assert cos.shape == (64, 32)
 
     def test_cos_values_in_range(self, rope):
@@ -81,6 +78,7 @@ class TestRotaryEmbedding:
 # =============================================================================
 # SwiGLU
 # =============================================================================
+
 
 class TestSwiGLU:
 
@@ -110,15 +108,16 @@ class TestSwiGLU:
         assert x.grad is not None
 
     def test_has_gate_up_proj(self, mlp):
-        assert hasattr(mlp, 'gate_up_proj')
+        assert hasattr(mlp, "gate_up_proj")
 
     def test_has_down_proj(self, mlp):
-        assert hasattr(mlp, 'down_proj')
+        assert hasattr(mlp, "down_proj")
 
 
 # =============================================================================
 # Attention
 # =============================================================================
+
 
 class TestAttention:
 
@@ -164,6 +163,7 @@ class TestAttention:
 # TransformerBlock
 # =============================================================================
 
+
 class TestTransformerBlock:
 
     @pytest.fixture
@@ -205,17 +205,18 @@ class TestTransformerBlock:
         assert x.grad is not None
 
     def test_has_attention(self, block):
-        assert hasattr(block, 'self_attn')
+        assert hasattr(block, "self_attn")
         assert isinstance(block.self_attn, Attention)
 
     def test_has_mlp(self, block):
-        assert hasattr(block, 'mlp')
+        assert hasattr(block, "mlp")
         assert isinstance(block.mlp, SwiGLU)
 
 
 # =============================================================================
 # ReasoningModule
 # =============================================================================
+
 
 class TestReasoningModule:
 
@@ -299,6 +300,7 @@ class TestReasoningModule:
 # =============================================================================
 # trunc_normal_init_
 # =============================================================================
+
 
 class TestTruncNormalInit:
 

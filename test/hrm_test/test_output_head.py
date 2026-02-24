@@ -17,10 +17,10 @@ import torch
 from hrm.layers.output_simplified import OutputHead
 from hrm.model_simplified import PuzzleType, SimplifiedHRMConfig
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def config():
@@ -40,6 +40,7 @@ def head(config):
 # =============================================================================
 # Output shapes per puzzle type
 # =============================================================================
+
 
 class TestOutputShapes:
     """OutputHead returns (batch, seq_len, vocab_size) for each puzzle type."""
@@ -72,17 +73,18 @@ class TestOutputShapes:
 # Architecture
 # =============================================================================
 
+
 class TestArchitecture:
 
     def test_has_all_heads(self, head):
-        assert 'sudoku_4x4' in head.heads
-        assert 'sudoku_9x9' in head.heads
-        assert 'maze' in head.heads
+        assert "sudoku_4x4" in head.heads
+        assert "sudoku_9x9" in head.heads
+        assert "maze" in head.heads
 
     def test_head_output_dims(self, head, config):
-        assert head.heads['sudoku_4x4'].out_features == 5
-        assert head.heads['sudoku_9x9'].out_features == 10
-        assert head.heads['maze'].out_features == 4
+        assert head.heads["sudoku_4x4"].out_features == 5
+        assert head.heads["sudoku_9x9"].out_features == 10
+        assert head.heads["maze"].out_features == 4
 
     def test_head_input_dims(self, head, config):
         for h in head.heads.values():
@@ -94,19 +96,20 @@ class TestArchitecture:
 
     def test_extra_repr(self, head):
         r = head.extra_repr()
-        assert 'hidden_size' in r
+        assert "hidden_size" in r
 
 
 # =============================================================================
 # Different puzzle types produce different outputs
 # =============================================================================
 
+
 class TestPuzzleDispatch:
 
     def test_4x4_vs_9x9_different_weights(self, head):
         """Different heads have different weights (independent parameters)."""
-        w4 = head.heads['sudoku_4x4'].weight
-        w9 = head.heads['sudoku_9x9'].weight
+        w4 = head.heads["sudoku_4x4"].weight
+        w9 = head.heads["sudoku_9x9"].weight
         # They have different shapes so trivially different
         assert w4.shape != w9.shape
 
@@ -124,6 +127,7 @@ class TestPuzzleDispatch:
 # Gradient flow
 # =============================================================================
 
+
 class TestGradients:
 
     def test_gradients_flow_4x4(self, head):
@@ -131,7 +135,7 @@ class TestGradients:
         logits = head(h, PuzzleType.SUDOKU_4X4)
         logits.sum().backward()
         assert h.grad is not None
-        assert head.heads['sudoku_4x4'].weight.grad is not None
+        assert head.heads["sudoku_4x4"].weight.grad is not None
 
     def test_gradients_flow_9x9(self, head):
         h = torch.randn(4, 81, 64, requires_grad=True)

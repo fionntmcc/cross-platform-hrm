@@ -30,38 +30,38 @@ __author__ = "Fionn McCarthy, Kyrylo Kozlovskyi"
 
 # Simplified HRM — L-Module Only (Ge et al. 2025)  [ACTIVE]
 from hrm.model_simplified import (
-    SimplifiedHRM,
-    SimplifiedHRMConfig,
-    PuzzleType,
     PUZZLE_DEFAULTS,
-    create_simplified_hrm,
-    create_small_simplified_hrm,
+    LModuleOnlyConfig,
     # Backward-compatible aliases
     LModuleOnlyHRM,
-    LModuleOnlyConfig,
+    PuzzleType,
+    SimplifiedHRM,
+    SimplifiedHRMConfig,
     create_lmodule_only_hrm,
+    create_simplified_hrm,
     create_small_lmodule_hrm,
+    create_small_simplified_hrm,
 )
 
 # Simplified PuzzleType alias (kept for scripts that import SimplifiedPuzzleType)
 SimplifiedPuzzleType = PuzzleType
 
 # Active Layers
-from hrm.layers import (
-    # Normalisation
-    RMSNorm,
-    RMSNormWithBias,
-    create_norm_layer,
-    rms_norm,
+from hrm.layers import (  # noqa: E402
+    Attention,
     # Simplified HRM layers (L-Module Only)
     InputEmbedding,
     OutputHead,
+    ReasoningModule,
+    # Normalisation
+    RMSNorm,
+    RMSNormWithBias,
+    RotaryEmbedding,
     # Transformer Building Blocks
     SwiGLU,
-    RotaryEmbedding,
-    Attention,
     TransformerBlock,
-    ReasoningModule,
+    create_norm_layer,
+    rms_norm,
 )
 
 __all__ = [

@@ -26,7 +26,7 @@ import torch.nn as nn
 from hrm.layers.transformer import trunc_normal_init_
 
 if TYPE_CHECKING:
-    from hrm.model_simplified import SimplifiedHRMConfig, PuzzleType
+    from hrm.model_simplified import PuzzleType, SimplifiedHRMConfig
 
 
 class OutputHead(nn.Module):
@@ -64,11 +64,13 @@ class OutputHead(nn.Module):
         self.config = config
 
         # One head per puzzle type
-        self.heads = nn.ModuleDict({
-            'sudoku_4x4': nn.Linear(config.hidden_size, 5, bias=False),
-            'sudoku_9x9': nn.Linear(config.hidden_size, 10, bias=False),
-            'maze': nn.Linear(config.hidden_size, 4, bias=False),
-        })
+        self.heads = nn.ModuleDict(
+            {
+                "sudoku_4x4": nn.Linear(config.hidden_size, 5, bias=False),
+                "sudoku_9x9": nn.Linear(config.hidden_size, 10, bias=False),
+                "maze": nn.Linear(config.hidden_size, 4, bias=False),
+            }
+        )
 
         # Initialise with truncated normal
         head_std = 1.0 / math.sqrt(config.hidden_size)
@@ -94,11 +96,11 @@ class OutputHead(nn.Module):
         from hrm.model_simplified import PuzzleType
 
         if puzzle_type == PuzzleType.SUDOKU_4X4:
-            return self.heads['sudoku_4x4'](h)
+            return self.heads["sudoku_4x4"](h)
         elif puzzle_type == PuzzleType.SUDOKU_9X9:
-            return self.heads['sudoku_9x9'](h)
+            return self.heads["sudoku_9x9"](h)
         else:
-            return self.heads['maze'](h)
+            return self.heads["maze"](h)
 
     def extra_repr(self) -> str:
         return f"hidden_size={self.config.hidden_size}, heads=sudoku_4x4/sudoku_9x9/maze"

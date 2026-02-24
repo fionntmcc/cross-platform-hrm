@@ -252,7 +252,7 @@ def is_valid_puzzle(
     Returns:
         True if the puzzle state has no violations.
     """
-    grid, grid_size, box_size = _validate_grid_input(grid)
+    grid, grid_size, _ = _validate_grid_input(grid)
 
     # Values must be in [0, grid_size]
     if grid.min() < 0 or grid.max() > grid_size:

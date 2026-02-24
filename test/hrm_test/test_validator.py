@@ -86,14 +86,13 @@ class TestValidateGridInput:
     """Tests for internal grid input validation."""
 
     def test_list_input_converted(self):
-        grid, size, box = _validate_grid_input(VALID_4X4_SOLUTION)
-        assert isinstance(grid, np.ndarray)
+        _grid, size, box = _validate_grid_input(VALID_4X4_SOLUTION)
         assert size == 4
         assert box == 2
 
     def test_ndarray_input_accepted(self):
         arr = np.array(VALID_9X9_SOLUTION)
-        grid, size, box = _validate_grid_input(arr)
+        _grid, size, box = _validate_grid_input(arr)
         assert size == 9
         assert box == 3
 

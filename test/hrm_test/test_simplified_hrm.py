@@ -18,25 +18,24 @@ Run: pytest test/hrm_test/test_simplified_hrm.py -v
 
 import pytest
 import torch
-import torch.nn as nn
 
-from hrm.model_simplified import (
-    SimplifiedHRM,
-    SimplifiedHRMConfig,
-    PuzzleType,
-    create_simplified_hrm,
-    create_small_simplified_hrm,
-    LModuleOnlyHRM,
-    LModuleOnlyConfig,
-)
 from hrm.layers.input_simplified import InputEmbedding
 from hrm.layers.output_simplified import OutputHead
 from hrm.layers.transformer import ReasoningModule, RotaryEmbedding
-
+from hrm.model_simplified import (
+    LModuleOnlyConfig,
+    LModuleOnlyHRM,
+    PuzzleType,
+    SimplifiedHRM,
+    SimplifiedHRMConfig,
+    create_simplified_hrm,
+    create_small_simplified_hrm,
+)
 
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def config():
@@ -83,6 +82,7 @@ def target_9x9():
 # Configuration
 # =============================================================================
 
+
 class TestConfig:
 
     def test_default_config(self):
@@ -107,31 +107,32 @@ class TestConfig:
 # Model initialisation
 # =============================================================================
 
+
 class TestModelInitialisation:
 
     def test_has_input_net(self, model):
-        assert hasattr(model, 'input_net')
+        assert hasattr(model, "input_net")
         assert isinstance(model.input_net, InputEmbedding)
 
     def test_has_reasoning_module(self, model):
-        assert hasattr(model, 'reasoning')
+        assert hasattr(model, "reasoning")
         assert isinstance(model.reasoning, ReasoningModule)
 
     def test_has_output_head(self, model):
-        assert hasattr(model, 'output_head')
+        assert hasattr(model, "output_head")
         assert isinstance(model.output_head, OutputHead)
 
     def test_has_rotary_emb(self, model):
-        assert hasattr(model, 'rotary_emb')
+        assert hasattr(model, "rotary_emb")
         assert isinstance(model.rotary_emb, RotaryEmbedding)
 
     def test_has_z_L_init_buffer(self, model, config):
-        assert hasattr(model, 'z_L_init')
+        assert hasattr(model, "z_L_init")
         assert model.z_L_init.shape == (1, 1, config.hidden_size)
 
     def test_no_planner(self, model):
-        assert not hasattr(model, 'planner')
-        assert not hasattr(model, 'worker')
+        assert not hasattr(model, "planner")
+        assert not hasattr(model, "worker")
 
     def test_backward_compat_alias(self):
         assert LModuleOnlyHRM is SimplifiedHRM
@@ -144,68 +145,70 @@ class TestModelInitialisation:
 # Forward pass — output dict
 # =============================================================================
 
+
 class TestForwardOutputDict:
 
     def test_required_keys_present(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert 'logits' in out
-        assert 'predictions' in out
-        assert 'reasoning_steps_used' in out
-        assert 'all_step_logits' in out
+        assert "logits" in out
+        assert "predictions" in out
+        assert "reasoning_steps_used" in out
+        assert "all_step_logits" in out
 
     def test_loss_absent_without_targets(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert 'loss' not in out
+        assert "loss" not in out
 
     def test_loss_present_with_targets(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        assert 'loss' in out
-        assert 'lm_loss' in out
+        assert "loss" in out
+        assert "lm_loss" in out
 
     def test_reasoning_steps_used(self, model, config, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert out['reasoning_steps_used'] == config.num_reasoning_steps
+        assert out["reasoning_steps_used"] == config.num_reasoning_steps
 
     def test_step_override(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, num_reasoning_steps=1)
-        assert out['reasoning_steps_used'] == 1
+        assert out["reasoning_steps_used"] == 1
 
     def test_all_step_logits_length(self, model, config, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert len(out['all_step_logits']) == config.num_reasoning_steps
+        assert len(out["all_step_logits"]) == config.num_reasoning_steps
 
 
 # =============================================================================
 # Output shapes
 # =============================================================================
 
+
 class TestOutputShapes:
 
     def test_logits_shape_4x4(self, model, puzzle_4x4):
         out = model(puzzle_4x4, PuzzleType.SUDOKU_4X4)
-        assert out['logits'].shape == (4, 16, 5)
+        assert out["logits"].shape == (4, 16, 5)
 
     def test_predictions_shape_4x4(self, model, puzzle_4x4):
         out = model(puzzle_4x4, PuzzleType.SUDOKU_4X4)
-        assert out['predictions'].shape == (4, 16)
+        assert out["predictions"].shape == (4, 16)
 
     def test_logits_shape_9x9(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert out['logits'].shape == (4, 81, 10)
+        assert out["logits"].shape == (4, 81, 10)
 
     def test_predictions_shape_9x9(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert out['predictions'].shape == (4, 81)
+        assert out["predictions"].shape == (4, 81)
 
     def test_predictions_are_valid_tokens_4x4(self, model, puzzle_4x4):
         out = model(puzzle_4x4, PuzzleType.SUDOKU_4X4)
-        preds = out['predictions']
+        preds = out["predictions"]
         assert preds.min() >= 0
         assert preds.max() <= 4
 
     def test_predictions_are_valid_tokens_9x9(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        preds = out['predictions']
+        preds = out["predictions"]
         assert preds.min() >= 0
         assert preds.max() <= 9
 
@@ -214,52 +217,57 @@ class TestOutputShapes:
 # Loss computation
 # =============================================================================
 
+
 class TestLossComputation:
 
     def test_loss_is_scalar(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        assert out['loss'].ndim == 0
+        assert out["loss"].ndim == 0
 
     def test_loss_is_positive(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        assert out['loss'].item() > 0
+        assert out["loss"].item() > 0
 
     def test_loss_has_gradient(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        assert out['loss'].requires_grad
+        assert out["loss"].requires_grad
 
     def test_backward_runs(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        out['loss'].backward()
+        out["loss"].backward()
         # Check a parameter has gradient
-        assert model.output_head.heads['sudoku_9x9'].weight.grad is not None
+        assert model.output_head.heads["sudoku_9x9"].weight.grad is not None
 
     def test_lm_loss_equals_loss(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        assert torch.allclose(out['loss'], out['lm_loss'])
+        assert torch.allclose(out["loss"], out["lm_loss"])
 
     def test_4x4_loss(self, model, puzzle_4x4, target_4x4):
         out = model(puzzle_4x4, PuzzleType.SUDOKU_4X4, targets=target_4x4)
-        assert out['loss'].item() > 0
+        assert out["loss"].item() > 0
 
 
 # =============================================================================
 # One-step gradient behaviour
 # =============================================================================
 
+
 class TestOneStepGradient:
 
     def test_intermediate_step_logits_detached(self, config, puzzle_9x9, target_9x9):
         """All step logits except the last should be detached."""
         config_multi = SimplifiedHRMConfig(
-            hidden_size=64, num_heads=4, num_layers=2,
-            num_reasoning_steps=3, dropout=0.0,
+            hidden_size=64,
+            num_heads=4,
+            num_layers=2,
+            num_reasoning_steps=3,
+            dropout=0.0,
         )
         model = SimplifiedHRM(config_multi)
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
         # The last step logit should have gradient, intermediate ones detached
-        assert out['all_step_logits'][-1].requires_grad
-        for step_logits in out['all_step_logits'][:-1]:
+        assert out["all_step_logits"][-1].requires_grad
+        for step_logits in out["all_step_logits"][:-1]:
             assert not step_logits.requires_grad
 
 
@@ -267,19 +275,20 @@ class TestOneStepGradient:
 # Return intermediates
 # =============================================================================
 
+
 class TestReturnIntermediates:
 
     def test_intermediates_key_absent_by_default(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert 'intermediates' not in out
+        assert "intermediates" not in out
 
     def test_intermediates_key_present_when_requested(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, return_intermediates=True)
-        assert 'intermediates' in out
+        assert "intermediates" in out
 
     def test_intermediates_step_predictions(self, model, config, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, return_intermediates=True)
-        step_preds = out['intermediates']['step_predictions']
+        step_preds = out["intermediates"]["step_predictions"]
         assert len(step_preds) == config.num_reasoning_steps
         for sp in step_preds:
             assert sp.shape == (4, 81)
@@ -288,6 +297,7 @@ class TestReturnIntermediates:
 # =============================================================================
 # Convenience helpers
 # =============================================================================
+
 
 class TestHelpers:
 
@@ -324,13 +334,14 @@ class TestHelpers:
 
     def test_extra_repr(self, model):
         r = model.extra_repr()
-        assert 'hidden_size' in r
-        assert 'L-only' in r
+        assert "hidden_size" in r
+        assert "L-only" in r
 
 
 # =============================================================================
 # Factory functions
 # =============================================================================
+
 
 class TestFactories:
 
@@ -359,22 +370,23 @@ class TestFactories:
         model = create_small_simplified_hrm(num_reasoning_steps=1)
         x = torch.randint(0, 5, (2, 16))
         out = model(x, PuzzleType.SUDOKU_4X4)
-        assert 'logits' in out
+        assert "logits" in out
 
 
 # =============================================================================
 # No NaN
 # =============================================================================
 
+
 class TestNumericalStability:
 
     def test_no_nan_forward(self, model, puzzle_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9)
-        assert not torch.isnan(out['logits']).any()
+        assert not torch.isnan(out["logits"]).any()
 
     def test_no_nan_after_backward(self, model, puzzle_9x9, target_9x9):
         out = model(puzzle_9x9, PuzzleType.SUDOKU_9X9, targets=target_9x9)
-        out['loss'].backward()
+        out["loss"].backward()
         for name, param in model.named_parameters():
             if param.grad is not None:
                 assert not torch.isnan(param.grad).any(), f"NaN gradient in {name}"

@@ -45,7 +45,7 @@ One-Step Gradient — How It Works:
     through ONE application of f_L (not through the entire recurrence).
 
     In the official HRM (model_unified._inner_forward):
-        - Each outer step runs an inner loop of H×L iterations
+        - Each outer step runs an inner loop of H*L iterations
         - All but the LAST inner iteration run in no_grad
         - The LAST inner iteration runs WITH gradients
         - Logits from that outer step have gradient through one f_L call
@@ -72,19 +72,19 @@ Usage:
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Dict, Any, List
+from typing import Any
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from hrm.layers.transformer import (
-    RotaryEmbedding,
-    ReasoningModule,
-    trunc_normal_init_,
-)
 from hrm.layers.input_simplified import InputEmbedding
 from hrm.layers.output_simplified import OutputHead
+from hrm.layers.transformer import (
+    ReasoningModule,
+    RotaryEmbedding,
+    trunc_normal_init_,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -92,16 +92,17 @@ from hrm.layers.output_simplified import OutputHead
 # ---------------------------------------------------------------------------
 class PuzzleType(Enum):
     """Supported puzzle types."""
-    SUDOKU_4X4 = auto()   # 4x4 grid, vocab=5 (0=empty, 1-4)
-    SUDOKU_9X9 = auto()   # 9x9 grid, vocab=10 (0=empty, 1-9)
-    MAZE = auto()         # Variable size, vocab=4
+
+    SUDOKU_4X4 = auto()  # 4x4 grid, vocab=5 (0=empty, 1-4)
+    SUDOKU_9X9 = auto()  # 9x9 grid, vocab=10 (0=empty, 1-9)
+    MAZE = auto()  # Variable size, vocab=4
 
 
 # Per-puzzle defaults
 PUZZLE_DEFAULTS = {
-    PuzzleType.SUDOKU_4X4: {'vocab_size': 5,  'seq_len': 16, 'grid_size': 4},
-    PuzzleType.SUDOKU_9X9: {'vocab_size': 10, 'seq_len': 81, 'grid_size': 9},
-    PuzzleType.MAZE:       {'vocab_size': 4,  'seq_len': None, 'grid_size': None},
+    PuzzleType.SUDOKU_4X4: {"vocab_size": 5, "seq_len": 16, "grid_size": 4},
+    PuzzleType.SUDOKU_9X9: {"vocab_size": 10, "seq_len": 81, "grid_size": 9},
+    PuzzleType.MAZE: {"vocab_size": 4, "seq_len": None, "grid_size": None},
 }
 
 
@@ -134,13 +135,14 @@ class SimplifiedHRMConfig:
         use_prediction_feedback: Whether to re-embed predictions between
             reasoning steps (self-conditioning / diffusion-style refinement).
     """
+
     hidden_size: int = 256
     num_heads: int = 4
-    num_layers: int = 8          # 8 layers (paper: expanded L-module)
+    num_layers: int = 8  # 8 layers (paper: expanded L-module)
     expansion: float = 4.0
     max_seq_len: int = 1024
     num_reasoning_steps: int = 16  # Paper default; max steps is optimal
-    vocab_size: int = 10           # Max vocab (Sudoku 9x9)
+    vocab_size: int = 10  # Max vocab (Sudoku 9x9)
     num_puzzle_types: int = 3
     rms_norm_eps: float = 1e-5
     dropout: float = 0.1
@@ -200,7 +202,7 @@ class SimplifiedHRM(nn.Module):
         >>> predictions = output_4['predictions']
     """
 
-    def __init__(self, config: Optional[SimplifiedHRMConfig] = None):
+    def __init__(self, config: SimplifiedHRMConfig | None = None):
         super().__init__()
 
         self.config = config or SimplifiedHRMConfig()
@@ -248,7 +250,7 @@ class SimplifiedHRM(nn.Module):
         # Matches model_unified.py which also uses register_buffer for
         # z_L_init and z_H_init (lines 353-364).
         self.register_buffer(
-            'z_L_init',
+            "z_L_init",
             torch.empty(1, 1, cfg.hidden_size),
         )
         trunc_normal_init_(self.z_L_init, std=1.0)
@@ -294,10 +296,10 @@ class SimplifiedHRM(nn.Module):
         self,
         x: torch.Tensor,
         puzzle_type: PuzzleType,
-        targets: Optional[torch.Tensor] = None,
-        num_reasoning_steps: Optional[int] = None,
+        targets: torch.Tensor | None = None,
+        num_reasoning_steps: int | None = None,
         return_intermediates: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Forward pass with iterative reasoning.
 
@@ -332,7 +334,6 @@ class SimplifiedHRM(nn.Module):
                 - 'intermediates': Per-step predictions (if requested)
         """
         batch_size, seq_len = x.shape
-        device = x.device
         n_steps = num_reasoning_steps or self.config.num_reasoning_steps
         use_feedback = self.config.use_prediction_feedback
 
@@ -346,9 +347,9 @@ class SimplifiedHRM(nn.Module):
         cos_sin = self.rotary_emb()
 
         # Step 4: Tracking
-        all_step_logits: List[torch.Tensor] = []
-        step_predictions: List[torch.Tensor] = []
-        given_mask = (x != 0)  # True for given clues
+        all_step_logits: list[torch.Tensor] = []
+        step_predictions: list[torch.Tensor] = []
+        given_mask = x != 0  # True for given clues
 
         # =================================================================
         # Step 5: Iterative reasoning with one-step gradient
@@ -366,23 +367,19 @@ class SimplifiedHRM(nn.Module):
         logits = None
 
         for step in range(n_steps):
-            is_last_step = (step == n_steps - 1)
+            is_last_step = step == n_steps - 1
 
             if is_last_step:
                 # Final step: WITH gradients (one-step gradient).
                 # This is the only step that contributes to the loss.
-                z_L, logits = self._reasoning_step(
-                    z_L, z_input, cos_sin, puzzle_type
-                )
+                z_L, logits = self._reasoning_step(z_L, z_input, cos_sin, puzzle_type)
             else:
                 # Intermediate steps: no gradients needed.
                 # Without this, N reasoning steps retain N separate
                 # autograd graphs (one per step), causing O(N*L) memory
                 # instead of O(L).
                 with torch.no_grad():
-                    z_L, logits = self._reasoning_step(
-                        z_L, z_input, cos_sin, puzzle_type
-                    )
+                    z_L, logits = self._reasoning_step(z_L, z_input, cos_sin, puzzle_type)
 
             all_step_logits.append(logits if is_last_step else logits.detach())
 
@@ -404,12 +401,12 @@ class SimplifiedHRM(nn.Module):
         assert logits is not None
         predictions = logits.argmax(dim=-1)
 
-        output: Dict[str, Any] = {
-            'logits': logits,
-            'predictions': predictions,
-            'all_step_logits': all_step_logits,
-            'z_L_final': z_L,
-            'reasoning_steps_used': n_steps,
+        output: dict[str, Any] = {
+            "logits": logits,
+            "predictions": predictions,
+            "all_step_logits": all_step_logits,
+            "z_L_final": z_L,
+            "reasoning_steps_used": n_steps,
         }
 
         # =================================================================
@@ -424,12 +421,12 @@ class SimplifiedHRM(nn.Module):
                 targets.view(-1),
             )
 
-            output['loss'] = lm_loss
-            output['lm_loss'] = lm_loss
+            output["loss"] = lm_loss
+            output["lm_loss"] = lm_loss
 
         if return_intermediates:
-            output['intermediates'] = {
-                'step_predictions': step_predictions,
+            output["intermediates"] = {
+                "step_predictions": step_predictions,
             }
 
         return output
@@ -446,7 +443,7 @@ class SimplifiedHRM(nn.Module):
         """Get predictions (no gradient)."""
         with torch.no_grad():
             output = self.forward(x, puzzle_type, **kwargs)
-        return output['predictions']
+        return output["predictions"]
 
     def solve_sudoku_4x4(
         self,

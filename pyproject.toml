@@ -24,7 +24,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["hrm*"]
+include = ["hrm*", "generators*"]
 
 # =============================================================================
 # Black Configuration
@@ -33,6 +33,12 @@ include = ["hrm*"]
 line-length = 100
 target-version = ["py310"]
 include = '\.pyi?$'
+extend-exclude = '''
+(
+  hrm/prototype
+  | scripts
+)
+'''
 
 # =============================================================================
 # Ruff Configuration
@@ -40,7 +46,8 @@ include = '\.pyi?$'
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["hrm", "test"]
+src = ["hrm", "generators", "test"]
+exclude = ["hrm/prototype"]
 
 [tool.ruff.lint]
 select = [
@@ -57,6 +64,10 @@ select = [
 ignore = [
     "E501",   # line too long (handled by Black)
     "B008",   # do not perform function call in argument defaults
+    "N803",   # argument name should be lowercase (math notation: z_L, z_H)
+    "N806",   # variable in function should be lowercase (math notation: z_L, z_H)
+    "N812",   # uppercase import alias (torch.nn.functional as F is conventional)
+    "RUF022", # __all__ not sorted (grouped by category with comments)
     "SIM108", # use ternary operator (can reduce readability)
     "RUF012", # mutable class variables (common in dataclasses)
     "UP007",  # use X | Y for union types (not always clearer)
@@ -96,7 +107,7 @@ markers = [
 # Coverage Configuration
 # =============================================================================
 [tool.coverage.run]
-source = ["hrm"]
+source = ["hrm", "generators"]
 omit = [
     "hrm/prototype/*",
     "hrm/__pycache__/*",

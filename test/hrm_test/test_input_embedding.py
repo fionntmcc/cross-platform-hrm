@@ -17,10 +17,10 @@ import torch
 from hrm.layers.input_simplified import InputEmbedding
 from hrm.model_simplified import PuzzleType, SimplifiedHRMConfig
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def config():
@@ -43,6 +43,7 @@ def embed(config):
 # =============================================================================
 # Output shape
 # =============================================================================
+
 
 class TestOutputShape:
     """Forward pass produces (batch, seq_len, hidden_size)."""
@@ -71,6 +72,7 @@ class TestOutputShape:
 # =============================================================================
 # All puzzle types supported
 # =============================================================================
+
 
 class TestPuzzleTypes:
     """All PuzzleType variants work without error."""
@@ -102,6 +104,7 @@ class TestPuzzleTypes:
 # Gradient flow
 # =============================================================================
 
+
 class TestGradients:
 
     def test_grad_flows_through_embedding(self, embed):
@@ -124,20 +127,21 @@ class TestGradients:
 # Architecture
 # =============================================================================
 
+
 class TestArchitecture:
 
     def test_has_token_embedding(self, embed, config):
-        assert hasattr(embed, 'tok_emb')
+        assert hasattr(embed, "tok_emb")
         assert embed.tok_emb.num_embeddings == config.vocab_size
         assert embed.tok_emb.embedding_dim == config.hidden_size
 
     def test_has_puzzle_embedding(self, embed, config):
-        assert hasattr(embed, 'puzzle_emb')
+        assert hasattr(embed, "puzzle_emb")
         assert embed.puzzle_emb.num_embeddings == config.num_puzzle_types
         assert embed.puzzle_emb.embedding_dim == config.hidden_size
 
     def test_has_input_proj(self, embed, config):
-        assert hasattr(embed, 'input_proj')
+        assert hasattr(embed, "input_proj")
         assert embed.input_proj.in_features == config.hidden_size
         assert embed.input_proj.out_features == config.hidden_size
 
@@ -146,5 +150,5 @@ class TestArchitecture:
 
     def test_extra_repr(self, embed):
         r = embed.extra_repr()
-        assert 'vocab_size' in r
-        assert 'hidden_size' in r
+        assert "vocab_size" in r
+        assert "hidden_size" in r

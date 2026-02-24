@@ -28,7 +28,7 @@ import torch.nn as nn
 from hrm.layers.transformer import trunc_normal_init_
 
 if TYPE_CHECKING:
-    from hrm.model_simplified import SimplifiedHRMConfig, PuzzleType
+    from hrm.model_simplified import PuzzleType, SimplifiedHRMConfig
 
 
 class InputEmbedding(nn.Module):
@@ -71,14 +71,10 @@ class InputEmbedding(nn.Module):
         self.tok_emb = nn.Embedding(config.vocab_size, config.hidden_size)
 
         # Puzzle type embedding for multi-task
-        self.puzzle_emb = nn.Embedding(
-            config.num_puzzle_types, config.hidden_size
-        )
+        self.puzzle_emb = nn.Embedding(config.num_puzzle_types, config.hidden_size)
 
         # Input projection (linear, no bias — matches Sapient)
-        self.input_proj = nn.Linear(
-            config.hidden_size, config.hidden_size, bias=False
-        )
+        self.input_proj = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
 
         self.dropout = nn.Dropout(config.dropout)
 
@@ -106,9 +102,7 @@ class InputEmbedding(nn.Module):
         h = self.tok_emb(x)
 
         # Add puzzle type embedding (broadcast to all positions)
-        puzzle_idx = torch.tensor(
-            [puzzle_type.value - 1], device=x.device, dtype=torch.long
-        )
+        puzzle_idx = torch.tensor([puzzle_type.value - 1], device=x.device, dtype=torch.long)
         h = h + self.puzzle_emb(puzzle_idx).unsqueeze(0)
 
         # Scale by sqrt(d) for stable training

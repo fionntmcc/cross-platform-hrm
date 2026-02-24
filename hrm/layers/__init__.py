@@ -12,21 +12,20 @@ been moved to hrm/prototype/models/ as they are only used by the archived
 Unified HRM, not by the active SimplifiedHRM training/inference pipeline.
 """
 
-from hrm.layers.norm import RMSNorm, RMSNormWithBias, create_norm_layer, rms_norm
-
 # Simplified HRM layers (L-Module Only)
 from hrm.layers.input_simplified import InputEmbedding
+from hrm.layers.norm import RMSNorm, RMSNormWithBias, create_norm_layer, rms_norm
 from hrm.layers.output_simplified import OutputHead
 
 # Transformer components
 from hrm.layers.transformer import (
-    SwiGLU,
-    RotaryEmbedding,
     Attention,
-    TransformerBlock,
-    ReasoningModule,
-    CastedLinear,
     CastedEmbedding,
+    CastedLinear,
+    ReasoningModule,
+    RotaryEmbedding,
+    SwiGLU,
+    TransformerBlock,
     trunc_normal_init_,
 )
 

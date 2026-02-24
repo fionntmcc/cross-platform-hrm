@@ -10,55 +10,52 @@ Authors:
 
 Supervisor: Dr. John Healy
 Atlantic Technological University
+
+Active model: SimplifiedHRM (L-Module Only, Ge et al. 2025)
+    - hrm.model_simplified — SimplifiedHRM, SimplifiedHRMConfig, PuzzleType
+    - scripts/train_simplified.py — training
+    - scripts/run_simplified.py  — inference & evaluation
+    - scripts/demo_simplified.py — interactive demo
+    - scripts/visualise_simplified.py — step visualisation
+
+Archived models (hrm/prototype/):
+    - hrm/prototype/models/model.py          — Original HRM_4x4 (H+L, MLP)
+    - hrm/prototype/models/model_simple.py   — Single-cell HRM variant
+    - hrm/prototype/models/model_unified.py  — UnifiedHRM with ACT/Q-learning
+    - hrm/prototype/models/model_transformer.py — Transformer HRM
 """
 
 __version__ = "0.1.0"
 __author__ = "Fionn McCarthy, Kyrylo Kozlovskyi"
 
-# Issue #8: Complete HRM Model
-from hrm.model import HRM_4x4, ExecutionTrace, create_hrm_4x4
-
-# Simplified L-Module Only Variant (Ge et al. 2025)
-from hrm.model_simple import HRM_4x4_Simple, SimpleExecutionTrace, create_hrm_4x4_simple
-
-# Transformer-based HRM (Sapient-compatible)
-from hrm.prototype.model_transformer import (
-    HRMTransformer,
-    HRMTransformerConfig,
-    create_hrm_transformer,
-)
-
-# Unified HRM for multiple puzzle types
-from hrm.model_unified import (
-    UnifiedHRM,
-    UnifiedHRMConfig,
+# Simplified HRM — L-Module Only (Ge et al. 2025)  [ACTIVE]
+from hrm.model_simplified import (
+    SimplifiedHRM,
+    SimplifiedHRMConfig,
     PuzzleType,
-    create_unified_hrm,
+    PUZZLE_DEFAULTS,
+    create_simplified_hrm,
+    create_small_simplified_hrm,
+    # Backward-compatible aliases
+    LModuleOnlyHRM,
+    LModuleOnlyConfig,
+    create_lmodule_only_hrm,
+    create_small_lmodule_hrm,
 )
 
-# Layers - Neural Network Components
+# Simplified PuzzleType alias (kept for scripts that import SimplifiedPuzzleType)
+SimplifiedPuzzleType = PuzzleType
+
+# Active Layers
 from hrm.layers import (
-    # Normalisation (Issue #1)
+    # Normalisation
     RMSNorm,
     RMSNormWithBias,
     create_norm_layer,
-    rms_norm,  # Functional RMSNorm
-    # Input Embedding (Issue #2)
-    InputNetwork,
-    create_input_network,
-    InputNetworkTransformer,
-    # Worker Module (Issue #3)
-    WorkerModule,
-    WorkerModuleWithGating,
-    WorkerTransformer,
-    # Planner Module (Issue #4)
-    PlannerModule,
-    create_planner_module,
-    PlannerTransformer,
-    # Output Network (Issue #5)
-    OutputNetwork,
-    create_output_network,
-    OutputNetworkTransformer,
+    rms_norm,
+    # Simplified HRM layers (L-Module Only)
+    InputEmbedding,
+    OutputHead,
     # Transformer Building Blocks
     SwiGLU,
     RotaryEmbedding,
@@ -67,98 +64,35 @@ from hrm.layers import (
     ReasoningModule,
 )
 
-# Core - Iteration and Convergence Logic
-from hrm.core import (
-    # Fixed-point iteration (Issue #21)
-    fixed_point_iteration,
-    FixedPointIterator,
-    iterate_to_convergence,
-    compute_residual,
-    IterationStats,
-    # Hierarchical iteration (Issue #7)
-    hierarchical_iteration,
-    HierarchicalIterator,
-    hierarchical_iterate_to_convergence,
-    single_hierarchical_step,
-    OuterLoopStats,
-    # Adaptive Computation Time
-    QHaltingHead,
-    QHaltingHeadTransformer,  # Sapient-compatible
-    HaltingPolicy,
-    ACTStats,
-    HaltingQTrainer,
-    compute_ponder_cost,
-    compute_act_loss,
-    create_halting_components,
-)
-
 __all__ = [
     # Package metadata
     "__version__",
     "__author__",
-    # Complete Model (Issue #8)
-    "HRM_4x4",
-    "ExecutionTrace",
-    "create_hrm_4x4",
-    # Simplified L-Module Only Variant (Ge et al. 2025)
-    "HRM_4x4_Simple",
-    "SimpleExecutionTrace",
-    "create_hrm_4x4_simple",
-    # Transformer-based HRM (Sapient-compatible)
-    "HRMTransformer",
-    "HRMTransformerConfig",
-    "create_hrm_transformer",
-    # Unified HRM (multi-puzzle support)
-    "UnifiedHRM",
-    "UnifiedHRMConfig",
+    # Simplified HRM — L-Module Only (Ge et al. 2025)  [ACTIVE]
+    "SimplifiedHRM",
+    "SimplifiedHRMConfig",
     "PuzzleType",
-    "create_unified_hrm",
-    # Normalisation (Issue #1)
+    "SimplifiedPuzzleType",
+    "PUZZLE_DEFAULTS",
+    "create_simplified_hrm",
+    "create_small_simplified_hrm",
+    # Backward-compatible aliases
+    "LModuleOnlyHRM",
+    "LModuleOnlyConfig",
+    "create_lmodule_only_hrm",
+    "create_small_lmodule_hrm",
+    # Normalisation
     "RMSNorm",
     "RMSNormWithBias",
     "create_norm_layer",
     "rms_norm",
-    # Input Network (Issue #2)
-    "InputNetwork",
-    "create_input_network",
-    "InputNetworkTransformer",
-    # Worker Module (Issue #3)
-    "WorkerModule",
-    "WorkerModuleWithGating",
-    "WorkerTransformer",
-    # Planner Module (Issue #4)
-    "PlannerModule",
-    "create_planner_module",
-    "PlannerTransformer",
-    # Output Network (Issue #5)
-    "OutputNetwork",
-    "create_output_network",
-    "OutputNetworkTransformer",
+    # Simplified HRM layers
+    "InputEmbedding",
+    "OutputHead",
     # Transformer Building Blocks
     "SwiGLU",
     "RotaryEmbedding",
     "Attention",
     "TransformerBlock",
     "ReasoningModule",
-    # Fixed-point iteration (Issue #21)
-    "fixed_point_iteration",
-    "FixedPointIterator",
-    "iterate_to_convergence",
-    "compute_residual",
-    "IterationStats",
-    # Hierarchical iteration (Issue #7)
-    "hierarchical_iteration",
-    "HierarchicalIterator",
-    "hierarchical_iterate_to_convergence",
-    "single_hierarchical_step",
-    "OuterLoopStats",
-    # Adaptive Computation Time
-    "QHaltingHead",
-    "QHaltingHeadTransformer",
-    "HaltingPolicy",
-    "ACTStats",
-    "HaltingQTrainer",
-    "compute_ponder_cost",
-    "compute_act_loss",
-    "create_halting_components",
 ]

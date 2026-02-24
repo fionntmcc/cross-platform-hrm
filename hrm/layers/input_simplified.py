@@ -28,7 +28,7 @@ import torch.nn as nn
 from hrm.layers.transformer import trunc_normal_init_
 
 if TYPE_CHECKING:
-    from hrm.model_simplified import SimplifiedHRMConfig, PuzzleType
+    from hrm.prototype.models.model_simplified import SimplifiedHRMConfig, PuzzleType
 
 
 class InputEmbedding(nn.Module):

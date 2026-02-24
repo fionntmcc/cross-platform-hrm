@@ -26,7 +26,7 @@ import torch.nn as nn
 from hrm.layers.transformer import trunc_normal_init_
 
 if TYPE_CHECKING:
-    from hrm.model_simplified import SimplifiedHRMConfig, PuzzleType
+    from hrm.prototype.models.model_simplified import SimplifiedHRMConfig, PuzzleType
 
 
 class OutputHead(nn.Module):
@@ -91,7 +91,7 @@ class OutputHead(nn.Module):
             Logits (batch, seq_len, vocab_size).
         """
         # Import here to avoid circular import at module level
-        from hrm.model_simplified import PuzzleType
+        from hrm.prototype.models.model_simplified import PuzzleType
 
         if puzzle_type == PuzzleType.SUDOKU_4X4:
             return self.heads['sudoku_4x4'](h)

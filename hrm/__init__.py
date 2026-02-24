@@ -29,7 +29,7 @@ __version__ = "0.1.0"
 __author__ = "Fionn McCarthy, Kyrylo Kozlovskyi"
 
 # Simplified HRM — L-Module Only (Ge et al. 2025)  [ACTIVE]
-from hrm.model_simplified import (
+from hrm.prototype.models.model_simplified import (
     SimplifiedHRM,
     SimplifiedHRMConfig,
     PuzzleType,

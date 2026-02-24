@@ -39,7 +39,7 @@ import torch
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType, PUZZLE_DEFAULTS
+from hrm.prototype.models.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType, PUZZLE_DEFAULTS
 
 # ── ANSI colours ────────────────────────────────────────────────────────────
 RESET   = "\033[0m"

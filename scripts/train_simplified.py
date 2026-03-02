@@ -190,7 +190,7 @@ def generate_sudoku_data(
     print(f"Generating {num_samples} {grid_size}x{grid_size} Sudoku puzzles...")
 
     if grid_size == 9:
-        from generators.sudoku_generator import SudokuGenerator, Difficulty
+        from hrm.data.sudoku_generator import SudokuGenerator, Difficulty
         generator = SudokuGenerator(grid_size=9)
 
         diff_map = {
@@ -295,7 +295,7 @@ def generate_maze_data(
     Returns:
         Tuple of (problems, solutions) numpy arrays.
     """
-    from generators.weighted_maze_generator import generate_weighted_maze_dataset
+    from hrm.data.weighted_maze_generator import generate_weighted_maze_dataset
 
     print(f"Generating {num_samples} {grid_size}x{grid_size} weighted mazes...")
 

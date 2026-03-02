@@ -11,7 +11,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from generators.generator_4x4 import generate_dataset, print_puzzle
+from hrm.prototype.generators.generator_4x4 import generate_dataset, print_puzzle
 from models.model_4x4_layers import HRM_4x4 
 
 
@@ -213,7 +213,7 @@ def test_model():
     print("Testing HRM 4x4 Solver")
     print("="*50)
     
-    from generators.generator_4x4 import generate_puzzle
+    from hrm.prototype.generators.generator_4x4 import generate_puzzle
     
     correct = 0
     total_iters = []

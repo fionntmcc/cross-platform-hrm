@@ -8,7 +8,7 @@ from pathlib import Path
 import json
 
 from models import HRM_4x4 
-from generators import generate_dataset, print_puzzle
+from hrm.prototype.generators import generate_dataset, print_puzzle
 
 
 class Dataset_4x4(Dataset):

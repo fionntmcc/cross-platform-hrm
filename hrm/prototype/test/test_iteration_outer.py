@@ -17,8 +17,8 @@ import torch
 
 from hrm.layers.worker import WorkerModule
 from hrm.layers.planner import PlannerModule
-from hrm.core.iteration import IterationStats
-from hrm.core.iteration_outer import (
+from hrm.prototype.core.iteration import IterationStats
+from hrm.prototype.core.iteration_outer import (
     hierarchical_iteration,
     hierarchical_iterate_to_convergence,
     single_hierarchical_step,

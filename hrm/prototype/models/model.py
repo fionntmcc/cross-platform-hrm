@@ -66,11 +66,11 @@ from hrm.layers.input_network import InputNetwork
 from hrm.layers.worker import WorkerModule
 from hrm.layers.planner import PlannerModule
 from hrm.layers.output_network import OutputNetwork
-from hrm.core.iteration_outer import (
+from hrm.prototype.core.iteration_outer import (
     hierarchical_iteration,
     OuterLoopStats,
 )
-from hrm.core.iteration import compute_residual
+from hrm.prototype.core.iteration import compute_residual
 
 
 @dataclass

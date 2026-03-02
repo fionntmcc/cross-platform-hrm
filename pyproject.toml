@@ -24,7 +24,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["hrm*", "generators*"]
+include = ["hrm*"]
 
 # =============================================================================
 # Black Configuration
@@ -46,7 +46,7 @@ extend-exclude = '''
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["hrm", "generators", "test"]
+src = ["hrm", "test"]
 exclude = ["hrm/prototype"]
 
 [tool.ruff.lint]
@@ -107,7 +107,7 @@ markers = [
 # Coverage Configuration
 # =============================================================================
 [tool.coverage.run]
-source = ["hrm", "generators"]
+source = ["hrm"]
 omit = [
     "hrm/prototype/*",
     "hrm/__pycache__/*",

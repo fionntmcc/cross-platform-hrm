@@ -283,7 +283,7 @@ def demo_maze(model: SimplifiedHRM, device: torch.device,
     else:
         # ── Generate fresh mazes ──
         try:
-            from generators.weighted_maze_generator import WeightedMazeGenerator
+            from hrm.data.weighted_maze_generator import WeightedMazeGenerator
             gen = WeightedMazeGenerator(grid_size=15, seed=42)
             print(f"Generating {num_examples} fresh 15x15 mazes...\n")
             for i in range(num_examples):

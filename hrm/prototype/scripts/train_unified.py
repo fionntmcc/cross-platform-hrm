@@ -192,7 +192,7 @@ def generate_sudoku_data(
     print(f"Generating {num_samples} {grid_size}x{grid_size} Sudoku puzzles...")
     
     if grid_size == 9:
-        from generators.sudoku_generator import SudokuGenerator, Difficulty
+        from hrm.data.sudoku_generator import SudokuGenerator, Difficulty
         generator = SudokuGenerator(grid_size=9)
         
         # Map string difficulty to enum

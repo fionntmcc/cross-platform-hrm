@@ -479,7 +479,7 @@ def main():
     mazes = []  # list of (maze_2d, solution_2d_or_None)
 
     if args.generate:
-        from generators.weighted_maze_generator import WeightedMazeGenerator
+        from hrm.data.weighted_maze_generator import WeightedMazeGenerator
         gen = WeightedMazeGenerator(grid_size=args.maze_size, seed=42)
         print(f"Generating {args.num} fresh {gen.grid_size}x{gen.grid_size} mazes...")
         for _ in range(args.num * 3):

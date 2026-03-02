@@ -25,7 +25,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from hrm.prototype.models.model_unified import UnifiedHRM, PuzzleType
-from generators.sudoku_generator import generate_sudoku_dataset
+from hrm.data.sudoku_generator import generate_sudoku_dataset
 
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────

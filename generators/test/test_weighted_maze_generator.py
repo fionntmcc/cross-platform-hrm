@@ -11,15 +11,22 @@ Tests cover:
   - Edge cases
 
 Usage:
-    python test_weighted_maze_generator.py
-    python -m pytest test_weighted_maze_generator.py -v
+    python -m pytest tests/test_weighted_maze_generator.py -v
 """
 
 import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from ..weighted_maze_generator import (
+# Ensure project root is on PYTHONPATH so absolute imports work
+# regardless of where pytest is invoked from.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from generators.weighted_maze_generator import (
     WeightedMazeGenerator,
     generate_weighted_maze_dataset,
     WALL, PATH, START, GOAL, MIN_WEIGHT, MAX_WEIGHT,

@@ -7,6 +7,7 @@ import tempfile
 
 import numpy as np
 import pytest
+
 from hrm.data.sudoku_generator import (
     Difficulty,
     SudokuGenerator,

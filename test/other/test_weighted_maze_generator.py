@@ -18,11 +18,15 @@ import numpy as np
 import pytest
 
 from hrm.data.weighted_maze_generator import (
+    GOAL,
+    MAX_WEIGHT,
+    MIN_WEIGHT,
+    PATH,
+    START,
+    WALL,
     WeightedMazeGenerator,
     generate_weighted_maze_dataset,
-    WALL, PATH, START, GOAL, MIN_WEIGHT, MAX_WEIGHT,
 )
-
 
 # =============================================================================
 # Token encoding tests
@@ -70,7 +74,7 @@ class TestGridStructure:
     def test_grid_dimensions(self, gen):
         result = gen.create_puzzle()
         assert result is not None
-        puzzle, solution, meta = result
+        puzzle, solution, _meta = result
         n = gen.grid_size
         assert len(puzzle) == n
         assert all(len(row) == n for row in puzzle)
@@ -234,7 +238,7 @@ class TestSolutionValidity:
     def test_solution_includes_start_and_goal(self, gen):
         result = gen.create_puzzle()
         assert result is not None
-        puzzle, solution, meta = result
+        _puzzle, solution, meta = result
         sr, sc = meta['start']
         gr, gc = meta['goal']
         assert solution[sr][sc] == 1, "Start must be on solution path"
@@ -243,7 +247,7 @@ class TestSolutionValidity:
     def test_solution_path_is_connected(self, gen):
         result = gen.create_puzzle()
         assert result is not None
-        puzzle, solution, meta = result
+        _puzzle, solution, meta = result
 
         path_cells = set()
         for r in range(gen.grid_size):
@@ -305,7 +309,7 @@ class TestSolutionValidity:
         """Generated puzzles must have exactly one cheapest path."""
         result = gen.create_puzzle()
         assert result is not None
-        puzzle, solution, meta = result
+        puzzle, _solution, meta = result
         assert gen._has_unique_optimal_path(
             puzzle, meta['start'], meta['goal']
         ), "Puzzle must have exactly one optimal path"

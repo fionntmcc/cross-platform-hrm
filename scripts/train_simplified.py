@@ -32,6 +32,13 @@ Usage:
     # Small model for quick experiments / RPi5
     python train_simplified.py --puzzle sudoku_4x4 --hidden-size 128 \\
         --num-layers 4 --reasoning-steps 8
+
+    # Train on weighted mazes (generate data)
+    python train_simplified.py --puzzle maze --generate-data \\
+        --num-samples 500 --maze-size 15 --epochs 100
+
+    # Train on existing maze data
+    python train_simplified.py --puzzle maze --data-path data/maze_15x15_train.npz
 """
 
 import argparse
@@ -183,7 +190,7 @@ def generate_sudoku_data(
     print(f"Generating {num_samples} {grid_size}x{grid_size} Sudoku puzzles...")
 
     if grid_size == 9:
-        from generators.sudoku_generator import SudokuGenerator, Difficulty
+        from hrm.data.sudoku_generator import SudokuGenerator, Difficulty
         generator = SudokuGenerator(grid_size=9)
 
         diff_map = {
@@ -246,6 +253,67 @@ def generate_sudoku_data(
         print(f"  Saved to {output_path}")
 
     return puzzles, solutions
+
+
+def load_maze_data(
+    data_path: str,
+    max_samples: Optional[int] = None,
+) -> MazeDataset:
+    """Load weighted maze data from .npz file.
+
+    The npz is expected to contain 'problems' and 'solutions' arrays
+    (shape: N x grid_size x grid_size) produced by
+    ``generators.weighted_maze_generator``.
+    """
+    print(f"Loading maze data from {data_path}...")
+
+    data = np.load(data_path)
+    problems = data['problems']
+    solutions = data['solutions']
+
+    if max_samples and len(problems) > max_samples:
+        indices = np.random.choice(len(problems), max_samples, replace=False)
+        problems = problems[indices]
+        solutions = solutions[indices]
+
+    print(f"  Loaded {len(problems)} mazes "
+          f"(grid: {problems.shape[1]}x{problems.shape[2]})")
+    return MazeDataset(problems, solutions)
+
+
+def generate_maze_data(
+    grid_size: int = 15,
+    num_samples: int = 100,
+    seed: Optional[int] = None,
+    output_path: Optional[str] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Generate weighted maze training data.
+
+    Uses :mod:`generators.weighted_maze_generator` to create mazes with
+    Dijkstra optimal-path solutions.
+
+    Returns:
+        Tuple of (problems, solutions) numpy arrays.
+    """
+    from hrm.data.weighted_maze_generator import generate_weighted_maze_dataset
+
+    print(f"Generating {num_samples} {grid_size}x{grid_size} weighted mazes...")
+
+    dataset = generate_weighted_maze_dataset(
+        num_puzzles=num_samples,
+        grid_size=grid_size,
+        seed=seed,
+        verbose=True,
+    )
+
+    problems = dataset['problems']
+    solutions = dataset['solutions']
+
+    if output_path:
+        np.savez(output_path, problems=problems, solutions=solutions)
+        print(f"  Saved to {output_path}")
+
+    return problems, solutions
 
 
 # =============================================================================
@@ -628,6 +696,8 @@ def main():
     parser.add_argument('--difficulty', type=str, default='hard',       # Paper: hard
                         choices=['easy', 'medium', 'hard', 'mixed'],
                         help='Puzzle difficulty (paper: hard; "mixed" = equal parts easy/medium/hard)')
+    parser.add_argument('--maze-size', type=int, default=15,
+                        help='Maze grid size (>= 7, forced odd; default: 15)')
 
     # Model arguments
     parser.add_argument('--hidden-size', type=int, default=256,
@@ -734,13 +804,20 @@ def main():
 
     elif args.puzzle == 'maze':
         puzzle_type = PuzzleType.MAZE
-        if args.data_path:
-            from scripts.train_unified import load_maze_data
-            dataset = load_maze_data(args.data_path)
+        default_data_path = data_dir / f'maze_{args.maze_size}x{args.maze_size}_train.npz'
+
+        if args.generate_data or (not args.data_path and not default_data_path.exists()):
+            out_path = args.data_output_path or str(default_data_path)
+            problems, solutions = generate_maze_data(
+                grid_size=args.maze_size,
+                num_samples=args.num_samples,
+                seed=args.seed,
+                output_path=out_path,
+            )
+            dataset = MazeDataset(problems, solutions)
         else:
-            print("Error: Maze training requires --data-path to maze data")
-            print("Generate maze data first using hrm/prototype/generators/maze_generator.py")
-            sys.exit(1)
+            data_path = args.data_path or str(default_data_path)
+            dataset = load_maze_data(data_path)
 
     # Train/val split
     n_val = int(len(dataset) * args.val_split)

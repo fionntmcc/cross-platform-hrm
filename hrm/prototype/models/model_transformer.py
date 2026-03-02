@@ -37,7 +37,7 @@ from hrm.layers.input_network import InputNetworkTransformer
 from hrm.layers.output_network import OutputNetworkTransformer
 from hrm.layers.worker import WorkerTransformer
 from hrm.layers.planner import PlannerTransformer
-from hrm.core.halting import QHaltingHeadTransformer
+from hrm.prototype.core.halting import QHaltingHeadTransformer
 
 
 @dataclass

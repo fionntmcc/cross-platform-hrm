@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from models.model_4x4_layers import HRM_4x4
-from generators.generator_4x4 import generate_puzzle, print_puzzle
+from hrm.prototype.generators.generator_4x4 import generate_puzzle, print_puzzle
 
 
 def demo():

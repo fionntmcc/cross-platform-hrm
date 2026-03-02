@@ -10,7 +10,7 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / 'hrm'))
 
-from generators.generator_4x4 import generate_dataset
+from hrm.prototype.generators.generator_4x4 import generate_dataset
 
 
 class Dataset_4x4:

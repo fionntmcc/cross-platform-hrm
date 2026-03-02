@@ -7,7 +7,8 @@ import tempfile
 
 import numpy as np
 import pytest
-from generators.sudoku_generator import (
+
+from hrm.data.sudoku_generator import (
     Difficulty,
     SudokuGenerator,
     create_puzzle,

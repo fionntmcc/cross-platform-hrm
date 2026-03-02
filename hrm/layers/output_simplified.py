@@ -39,7 +39,7 @@ class OutputHead(nn.Module):
     Heads:
         - sudoku_4x4: hidden_size → 5  (0=empty, 1-4)
         - sudoku_9x9: hidden_size → 10 (0=empty, 1-9)
-        - maze:       hidden_size → 4
+        - maze:       hidden_size → 2  (0=not on path, 1=on path)
 
     Args:
         config: SimplifiedHRMConfig with model hyperparameters.
@@ -68,7 +68,7 @@ class OutputHead(nn.Module):
             {
                 "sudoku_4x4": nn.Linear(config.hidden_size, 5, bias=False),
                 "sudoku_9x9": nn.Linear(config.hidden_size, 10, bias=False),
-                "maze": nn.Linear(config.hidden_size, 4, bias=False),
+                "maze": nn.Linear(config.hidden_size, 2, bias=False),
             }
         )
 

@@ -18,6 +18,11 @@ Usage:
     python scripts/visualise_simplified.py \
         --model model/simplified_hrm_sudoku_9x9_best.pt --puzzle sudoku_9x9
 
+    # Weighted maze (from dataset)
+    python scripts/visualise_simplified.py \
+        --model model/simplified_hrm_maze_best.pt --puzzle maze \
+        --data data/maze_15x15_train.npz
+
     # Custom puzzle (row-major, 0=empty)
     python scripts/visualise_simplified.py \
         --model model/simplified_hrm_sudoku_4x4_final.pt --puzzle sudoku_4x4 \
@@ -87,11 +92,55 @@ def print_sudoku_grid(grid, original, target=None, grid_size=9):
 
 
 def compute_accuracy(pred, target, original):
-    """Cell-level accuracy on empty cells only."""
+    """Cell-level accuracy on empty cells only (Sudoku) or all cells (Maze)."""
     mask = original.flatten() == 0
     if mask.sum() == 0:
-        return 1.0
+        # Maze or fully given — compare all cells
+        return float((pred.flatten() == target.flatten()).mean())
     return float((pred.flatten()[mask] == target.flatten()[mask]).mean())
+
+
+# ── Maze token symbols ──────────────────────────────────────────────────────
+
+_MAZE_TOKENS = {0: '█', 1: ' ', 2: 'S', 3: 'G'}
+
+def _maze_cell(token: int) -> str:
+    """Return a display character for a maze token."""
+    if token in _MAZE_TOKENS:
+        return _MAZE_TOKENS[token]
+    return str(token)  # weighted cells 4-9
+
+
+def print_maze_grid(maze_grid, pred_grid=None, target_grid=None):
+    """Print a weighted-maze grid with optional path overlay.
+
+    If *pred_grid* is not None, cells predicted as on-path (1) are shown
+    in colour.  If *target_grid* is also given, correct path cells are
+    green and wrong predictions are red.
+    """
+    rows, cols = maze_grid.shape
+    for r in range(rows):
+        parts = []
+        for c in range(cols):
+            tok = int(maze_grid[r, c])
+            ch = _maze_cell(tok)
+            if pred_grid is not None and int(pred_grid[r, c]) == 1:
+                if target_grid is not None:
+                    if int(target_grid[r, c]) == 1:
+                        parts.append(f"{GREEN}{ch}{RESET}")
+                    else:
+                        parts.append(f"{RED}{ch}{RESET}")
+                else:
+                    parts.append(f"{YELLOW}{ch}{RESET}")
+            elif target_grid is not None and int(target_grid[r, c]) == 1 and (pred_grid is None or int(pred_grid[r, c]) != 1):
+                # Missed path cell
+                parts.append(f"{CYAN}{ch}{RESET}")
+            else:
+                if tok == 0:
+                    parts.append(f"{DIM}{ch}{RESET}")
+                else:
+                    parts.append(ch)
+        print(' '.join(parts))
 
 
 # ── Sample puzzles ──────────────────────────────────────────────────────────
@@ -131,7 +180,8 @@ def load_model(model_path: str, device: torch.device) -> SimplifiedHRM:
 def visualise(model: SimplifiedHRM, config: SimplifiedHRMConfig,
               puzzle_flat: np.ndarray, puzzle_type: PuzzleType,
               target_flat: np.ndarray = None,
-              num_steps: int = None, delay: float = 0.3):
+              num_steps: int = None, delay: float = 0.3,
+              grid_size: int = None):
     """
     Run the model and print the grid after each reasoning step.
 
@@ -143,10 +193,14 @@ def visualise(model: SimplifiedHRM, config: SimplifiedHRMConfig,
         target_flat: Optional 1-D target solution for colour coding.
         num_steps: Override number of reasoning steps.
         delay: Seconds to pause between printing each step.
+        grid_size: Grid side length (auto-detected from puzzle_flat if None).
     """
     device = next(model.parameters()).device
-    defaults = PUZZLE_DEFAULTS[puzzle_type]
-    grid_size = defaults['grid_size']
+    is_maze = puzzle_type == PuzzleType.MAZE
+
+    if grid_size is None:
+        defaults = PUZZLE_DEFAULTS[puzzle_type]
+        grid_size = defaults['grid_size']
     grid_shape = (grid_size, grid_size)
 
     x = torch.from_numpy(puzzle_flat).long().unsqueeze(0).to(device)
@@ -175,15 +229,22 @@ def visualise(model: SimplifiedHRM, config: SimplifiedHRMConfig,
     print(f"  Pred. feedback   : {'On' if config.use_prediction_feedback else 'Off'}")
 
     # Colour legend
-    print(f"\n  Legend: {DIM}dim{RESET}=given  ", end="")
-    if target_grid is not None:
-        print(f"{GREEN}green{RESET}=correct  {RED}red{RESET}=wrong")
+    if is_maze:
+        print(f"\n  Legend: {GREEN}green{RESET}=correct path  {RED}red{RESET}=wrong path  "
+              f"{CYAN}cyan{RESET}=missed path  {DIM}dim{RESET}=wall")
     else:
-        print(f"{YELLOW}yellow{RESET}=predicted")
+        print(f"\n  Legend: {DIM}dim{RESET}=given  ", end="")
+        if target_grid is not None:
+            print(f"{GREEN}green{RESET}=correct  {RED}red{RESET}=wrong")
+        else:
+            print(f"{YELLOW}yellow{RESET}=predicted")
 
     # Show input
     print(f"\n{BOLD}-- Input Puzzle --{RESET}")
-    print_sudoku_grid(original_grid, original_grid, target_grid, grid_size)
+    if is_maze:
+        print_maze_grid(original_grid, target_grid=target_grid)
+    else:
+        print_sudoku_grid(original_grid, original_grid, target_grid, grid_size)
 
     # Show each reasoning step
     for i, preds_tensor in enumerate(step_preds):
@@ -196,8 +257,11 @@ def visualise(model: SimplifiedHRM, config: SimplifiedHRMConfig,
 
         acc_str = ""
         if target_grid is not None:
-            acc = compute_accuracy(preds, target_grid, original_grid)
-            acc_str = f"  (empty-cell accuracy: {acc:.1%})"
+            if is_maze:
+                acc = float((preds.flatten() == target_grid.flatten()).mean())
+            else:
+                acc = compute_accuracy(preds, target_grid, original_grid)
+            acc_str = f"  (accuracy: {acc:.1%})"
 
         # Count changes from previous step
         changes_str = ""
@@ -207,16 +271,25 @@ def visualise(model: SimplifiedHRM, config: SimplifiedHRMConfig,
             changes_str = f"  [{n_changed} cells changed]"
 
         print(f"\n{BOLD}-- {label}{acc_str}{changes_str} --{RESET}")
-        print_sudoku_grid(preds, original_grid, target_grid, grid_size)
+        if is_maze:
+            print_maze_grid(original_grid, pred_grid=preds, target_grid=target_grid)
+        else:
+            print_sudoku_grid(preds, original_grid, target_grid, grid_size)
 
     # Summary
     if target_grid is not None:
         final_preds = step_preds[-1][0].cpu().numpy().reshape(grid_shape)
-        final_acc = compute_accuracy(final_preds, target_grid, original_grid)
-        n_empty = (original_grid == 0).sum()
-        n_correct = ((final_preds.flatten() == target_grid.flatten()) &
-                     (original_grid.flatten() == 0)).sum()
-        print(f"\n{BOLD}Summary:{RESET}  {n_correct}/{n_empty} empty cells correct ({final_acc:.1%})")
+        if is_maze:
+            final_acc = float((final_preds.flatten() == target_grid.flatten()).mean())
+            n_total = target_grid.size
+            n_correct = (final_preds.flatten() == target_grid.flatten()).sum()
+            print(f"\n{BOLD}Summary:{RESET}  {n_correct}/{n_total} cells correct ({final_acc:.1%})")
+        else:
+            final_acc = compute_accuracy(final_preds, target_grid, original_grid)
+            n_empty = (original_grid == 0).sum()
+            n_correct = ((final_preds.flatten() == target_grid.flatten()) &
+                         (original_grid.flatten() == 0)).sum()
+            print(f"\n{BOLD}Summary:{RESET}  {n_correct}/{n_empty} empty cells correct ({final_acc:.1%})")
 
     print()
 
@@ -229,12 +302,16 @@ def main():
     parser.add_argument('--model', type=str, required=True,
                         help='Path to trained model checkpoint')
     parser.add_argument('--puzzle', type=str, required=True,
-                        choices=['sudoku_4x4', 'sudoku_9x9'],
+                        choices=['sudoku_4x4', 'sudoku_9x9', 'maze'],
                         help='Puzzle type')
     parser.add_argument('--input', type=str, default=None,
                         help='Puzzle values as comma-separated integers (row-major, 0=empty)')
     parser.add_argument('--target', type=str, default=None,
                         help='Target solution as comma-separated integers (for colour coding)')
+    parser.add_argument('--data', type=str, default=None,
+                        help='Path to .npz data file (picks a random example for maze)')
+    parser.add_argument('--index', type=int, default=None,
+                        help='Index of puzzle to pick from --data file')
     parser.add_argument('--steps', type=int, default=None,
                         help='Override number of reasoning steps')
     parser.add_argument('--delay', type=float, default=0.3,
@@ -248,6 +325,7 @@ def main():
     puzzle_type_map = {
         'sudoku_4x4': PuzzleType.SUDOKU_4X4,
         'sudoku_9x9': PuzzleType.SUDOKU_9X9,
+        'maze': PuzzleType.MAZE,
     }
     puzzle_type = puzzle_type_map[args.puzzle]
 
@@ -256,16 +334,35 @@ def main():
     model, config = load_model(args.model, device)
     print(f"  {model.num_parameters:,} parameters")
 
+    # Determine grid size
+    grid_size = None  # auto-detect
+
     # Parse or use sample puzzle
-    if args.input:
+    target_flat = None
+
+    if args.data:
+        # Load from .npz dataset
+        data = np.load(args.data)
+        key_problems = 'problems' if 'problems' in data else 'puzzles'
+        key_solutions = 'solutions'
+        problems = data[key_problems]
+        solutions = data[key_solutions]
+        idx = args.index if args.index is not None else np.random.randint(len(problems))
+        print(f"  Using puzzle {idx} from {args.data}")
+        puzzle_flat = problems[idx].flatten().astype(np.int64)
+        target_flat = solutions[idx].flatten().astype(np.int64)
+        grid_size = problems[idx].shape[0]
+    elif args.input:
         puzzle_flat = np.array([int(x.strip()) for x in args.input.split(',')], dtype=np.int64)
     else:
         if puzzle_type == PuzzleType.SUDOKU_4X4:
             puzzle_flat = SAMPLE_4X4.flatten()
-        else:
+        elif puzzle_type == PuzzleType.SUDOKU_9X9:
             puzzle_flat = SAMPLE_9X9.flatten()
+        else:
+            print("Error: Maze visualisation requires --data or --input")
+            sys.exit(1)
 
-    target_flat = None
     if args.target:
         target_flat = np.array([int(x.strip()) for x in args.target.split(',')], dtype=np.int64)
 
@@ -274,6 +371,7 @@ def main():
         target_flat=target_flat,
         num_steps=args.steps,
         delay=args.delay,
+        grid_size=grid_size,
     )
 
 

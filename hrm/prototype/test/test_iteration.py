@@ -15,7 +15,7 @@ import pytest
 import torch
 
 from hrm.layers.worker import WorkerModule
-from hrm.core.iteration import (
+from hrm.prototype.core.iteration import (
     fixed_point_iteration,
     iterate_to_convergence,
     compute_residual,

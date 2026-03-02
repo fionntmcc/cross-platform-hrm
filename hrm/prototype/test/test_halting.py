@@ -16,7 +16,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from hrm.core.halting import (
+from hrm.prototype.core.halting import (
     QHaltingHead,
     HaltingPolicy,
     ACTStats,

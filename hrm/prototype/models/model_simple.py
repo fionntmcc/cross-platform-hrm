@@ -39,7 +39,7 @@ import torch.nn.functional as F
 from hrm.layers.input_network import InputNetwork
 from hrm.layers.worker import WorkerModule
 from hrm.layers.output_network import OutputNetwork
-from hrm.core.iteration import compute_residual
+from hrm.prototype.core.iteration import compute_residual
 
 
 @dataclass

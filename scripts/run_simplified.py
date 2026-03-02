@@ -1,5 +1,5 @@
 """
-Run trained Simplified HRM on Sudoku puzzles.
+Run trained Simplified HRM on Sudoku or Maze puzzles.
 
 Loads a trained checkpoint, evaluates on held-out puzzles from the dataset,
 and displays example solutions side-by-side with ground truth.
@@ -7,7 +7,7 @@ and displays example solutions side-by-side with ground truth.
 Usage:
     python scripts/run_simplified.py --model model/simplified_hrm_sudoku_4x4_final.pt --puzzle sudoku_4x4
     python scripts/run_simplified.py --model model/simplified_hrm_sudoku_9x9_best.pt --puzzle sudoku_9x9
-    python scripts/run_simplified.py --model model/simplified_hrm_sudoku_4x4_final.pt --puzzle sudoku_4x4 --data data/sudoku_4x4_train.npz
+    python scripts/run_simplified.py --model model/simplified_hrm_maze_best.pt --puzzle maze --data data/maze_15x15_train.npz
 """
 
 import argparse
@@ -25,6 +25,17 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType
+
+
+# ── ANSI helpers ──────────────────────────────────────────────────────────────
+
+RESET  = "\033[0m"
+BOLD   = "\033[1m"
+DIM    = "\033[2m"
+RED    = "\033[91m"
+GREEN  = "\033[92m"
+YELLOW = "\033[93m"
+CYAN   = "\033[96m"
 
 
 # ── Pretty-printing ──────────────────────────────────────────────────────────
@@ -95,14 +106,55 @@ def validate_sudoku(sol, size):
     return True
 
 
+# ── Maze printing ─────────────────────────────────────────────────────────────
+
+_MAZE_TOKENS = {0: '█', 1: ' ', 2: 'S', 3: 'G'}
+
+
+def _maze_cell(token: int) -> str:
+    if token in _MAZE_TOKENS:
+        return _MAZE_TOKENS[token]
+    return str(token)
+
+
+def print_maze(maze_grid, pred_grid=None, solution=None, title=""):
+    """Print a weighted maze with path overlay."""
+    if title:
+        print(f"\n  {title}")
+    rows, cols = maze_grid.shape
+    for r in range(rows):
+        parts = []
+        for c in range(cols):
+            tok = int(maze_grid[r, c])
+            ch = _maze_cell(tok)
+            if pred_grid is not None and int(pred_grid[r, c]) == 1:
+                if solution is not None:
+                    if int(solution[r, c]) == 1:
+                        parts.append(f"{GREEN}{ch}{RESET}")
+                    else:
+                        parts.append(f"{RED}{ch}{RESET}")
+                else:
+                    parts.append(f"{YELLOW}{ch}{RESET}")
+            elif solution is not None and int(solution[r, c]) == 1 and (
+                pred_grid is None or int(pred_grid[r, c]) != 1
+            ):
+                parts.append(f"{CYAN}{ch}{RESET}")  # missed path
+            else:
+                if tok == 0:
+                    parts.append(f"{DIM}{ch}{RESET}")
+                else:
+                    parts.append(ch)
+        print('  ' + ' '.join(parts))
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Run trained Simplified HRM on Sudoku puzzles")
+    parser = argparse.ArgumentParser(description="Run trained Simplified HRM on Sudoku or Maze puzzles")
     parser.add_argument("--model", type=str, required=True,
                         help="Path to checkpoint (.pt file)")
     parser.add_argument("--puzzle", type=str, default="sudoku_4x4",
-                        choices=["sudoku_4x4", "sudoku_9x9"])
+                        choices=["sudoku_4x4", "sudoku_9x9", "maze"])
     parser.add_argument("--data", type=str, default=None,
                         help="Path to .npz data file (auto-detected if omitted)")
     parser.add_argument("--num-examples", type=int, default=5,
@@ -123,9 +175,16 @@ def main():
     else:
         device = torch.device(args.device)
 
-    grid_size = 9 if "9x9" in args.puzzle else 4
-    puzzle_type = PuzzleType.SUDOKU_9X9 if grid_size == 9 else PuzzleType.SUDOKU_4X4
-    print_grid = print_9x9 if grid_size == 9 else print_4x4
+    is_maze = args.puzzle == "maze"
+
+    if is_maze:
+        grid_size = None  # determined from data
+        puzzle_type = PuzzleType.MAZE
+        print_grid = None  # will use print_maze
+    else:
+        grid_size = 9 if "9x9" in args.puzzle else 4
+        puzzle_type = PuzzleType.SUDOKU_9X9 if grid_size == 9 else PuzzleType.SUDOKU_4X4
+        print_grid = print_9x9 if grid_size == 9 else print_4x4
 
     # ── Load model ────────────────────────────────────────────────────────
     model_path = Path(args.model)
@@ -159,12 +218,16 @@ def main():
     # ── Load data ─────────────────────────────────────────────────────────
     data_path = args.data
     if data_path is None:
-        # Try common locations
-        candidates = [
-            PROJECT_ROOT / "data" / f"{args.puzzle}_train.npz",
-            PROJECT_ROOT / "data" / f"{args.puzzle}_mixed_5000.npz",
-            PROJECT_ROOT / "data" / f"{args.puzzle}_mixed_50000.npz",
-        ]
+        if is_maze:
+            candidates = [
+                PROJECT_ROOT / "data" / "maze_15x15_train.npz",
+            ]
+        else:
+            candidates = [
+                PROJECT_ROOT / "data" / f"{args.puzzle}_train.npz",
+                PROJECT_ROOT / "data" / f"{args.puzzle}_mixed_5000.npz",
+                PROJECT_ROOT / "data" / f"{args.puzzle}_mixed_50000.npz",
+            ]
         for c in candidates:
             if c.exists():
                 data_path = c
@@ -173,36 +236,55 @@ def main():
         data_path = Path(data_path)
 
     if data_path is None or not Path(data_path).exists():
-        print(f"No data file found. Using hardcoded example puzzles.\n")
-        puzzles = None
-        solutions = None
+        print(f"Error: No data file found. Please provide a --data path to a .npz file.")
+        sys.exit(1)
     else:
         npz = np.load(str(data_path))
-        puzzles = npz["puzzles"]
-        solutions = npz["solutions"]
+        # Maze datasets use 'problems'; sudoku uses 'puzzles'
+        key = 'problems' if 'problems' in npz else 'puzzles'
+        puzzles = npz[key]
+        solutions = npz['solutions']
+        if is_maze:
+            grid_size = puzzles.shape[1]
         print(f"Loaded {len(puzzles)} puzzles from {data_path}")
 
     # ── Batch evaluation ──────────────────────────────────────────────────
-    if puzzles is not None:
-        n_eval = min(args.eval_count, len(puzzles))
-        # Use the LAST n_eval puzzles (least likely to have been heavily trained on)
-        eval_idx = np.arange(len(puzzles) - n_eval, len(puzzles))
-        eval_puzzles = puzzles[eval_idx]
-        eval_solutions = solutions[eval_idx]
+    n_eval = min(args.eval_count, len(puzzles))
+    # Use the LAST n_eval puzzles (least likely to have been heavily trained on)
+    eval_idx = np.arange(len(puzzles) - n_eval, len(puzzles))
+    eval_puzzles = puzzles[eval_idx]
+    eval_solutions = solutions[eval_idx]
 
-        print(f"\nEvaluating on {n_eval} puzzles ...")
-        batch_size = 64
-        all_preds = []
-        with torch.no_grad():
-            for start in range(0, n_eval, batch_size):
-                end = min(start + batch_size, n_eval)
-                batch = torch.from_numpy(eval_puzzles[start:end]).long().view(end - start, -1).to(device)
-                out = model.forward(batch, puzzle_type)
-                preds = out["predictions"].cpu().numpy().reshape(-1, grid_size, grid_size)
-                all_preds.append(preds)
-        all_preds = np.concatenate(all_preds, axis=0)
+    print(f"\nEvaluating on {n_eval} puzzles ...")
+    batch_size = 64
+    all_preds = []
+    with torch.no_grad():
+        for start in range(0, n_eval, batch_size):
+            end = min(start + batch_size, n_eval)
+            batch = torch.from_numpy(eval_puzzles[start:end]).long().view(end - start, -1).to(device)
+            out = model.forward(batch, puzzle_type)
+            preds = out["predictions"].cpu().numpy().reshape(-1, grid_size, grid_size)
+            all_preds.append(preds)
+    all_preds = np.concatenate(all_preds, axis=0)
 
-        # Metrics
+    # Metrics
+    if is_maze:
+        # Maze: binary output — compare all cells
+        total_cells = eval_solutions.size
+        cell_correct = (all_preds == eval_solutions).sum()
+        cell_acc = cell_correct / total_cells
+
+        puzzle_correct = sum(
+            (all_preds[i] == eval_solutions[i]).all() for i in range(n_eval)
+        )
+
+        print(f"\n{'='*50}")
+        print(f"  EVALUATION RESULTS  ({n_eval} mazes, {grid_size}x{grid_size})")
+        print(f"{'='*50}")
+        print(f"  Cell accuracy   : {cell_acc:.1%}")
+        print(f"  Puzzle accuracy : {puzzle_correct}/{n_eval}  ({puzzle_correct/n_eval:.1%})")
+        print(f"{'='*50}")
+    else:
         empty_masks = (eval_puzzles == 0)
         token_correct = (all_preds == eval_solutions) & empty_masks
         total_empty = empty_masks.sum()
@@ -227,72 +309,48 @@ def main():
 
     # ── Display examples ──────────────────────────────────────────────────
     n_show = args.num_examples
-    if puzzles is not None:
-        show_idx = np.random.choice(len(eval_puzzles), size=min(n_show, len(eval_puzzles)), replace=False)
-        show_puzzles = eval_puzzles[show_idx]
-        show_solutions = eval_solutions[show_idx]
-        show_preds = all_preds[show_idx]
-    else:
-        # Hardcoded fallback examples
-        if grid_size == 4:
-            show_puzzles = [np.array([
-                [1, 0, 0, 4],
-                [0, 0, 1, 0],
-                [0, 1, 0, 0],
-                [4, 0, 0, 1],
-            ]), np.array([
-                [0, 2, 0, 0],
-                [0, 0, 3, 1],
-                [1, 3, 0, 0],
-                [0, 0, 1, 0],
-            ])]
-        else:
-            show_puzzles = [np.array([
-                [5, 3, 0, 0, 7, 0, 0, 0, 0],
-                [6, 0, 0, 1, 9, 5, 0, 0, 0],
-                [0, 9, 8, 0, 0, 0, 0, 6, 0],
-                [8, 0, 0, 0, 6, 0, 0, 0, 3],
-                [4, 0, 0, 8, 0, 3, 0, 0, 1],
-                [7, 0, 0, 0, 2, 0, 0, 0, 6],
-                [0, 6, 0, 0, 0, 0, 2, 8, 0],
-                [0, 0, 0, 4, 1, 9, 0, 0, 5],
-                [0, 0, 0, 0, 8, 0, 0, 7, 9],
-            ])]
-
-        show_solutions = None
-        show_preds = []
-        with torch.no_grad():
-            for p in show_puzzles:
-                t = torch.from_numpy(p).long().view(1, -1).to(device)
-                out = model.forward(t, puzzle_type)
-                show_preds.append(out["predictions"].cpu().numpy().reshape(grid_size, grid_size))
-        show_preds = np.array(show_preds)
-        n_show = len(show_puzzles)
+    show_idx = np.random.choice(len(eval_puzzles), size=min(n_show, len(eval_puzzles)), replace=False)
+    show_puzzles = eval_puzzles[show_idx]
+    show_solutions = eval_solutions[show_idx]
+    show_preds = all_preds[show_idx]
 
     print(f"\n{'='*50}")
     print(f"  EXAMPLE SOLUTIONS")
-    print(f"  Legend: \033[1mbold\033[0m=given  \033[92mgreen\033[0m=correct  \033[91mred\033[0m=wrong")
+    if is_maze:
+        print(f"  Legend: \033[92mgreen\033[0m=correct path  \033[91mred\033[0m=wrong path  \033[96mcyan\033[0m=missed")
+    else:
+        print(f"  Legend: \033[1mbold\033[0m=given  \033[92mgreen\033[0m=correct  \033[91mred\033[0m=wrong")
     print(f"{'='*50}")
 
     for i in range(min(n_show, len(show_puzzles))):
         puzzle_np = show_puzzles[i]
         pred_np = show_preds[i]
-        given_mask = (puzzle_np != 0)
-        # Merge givens into prediction display
-        display = pred_np.copy()
-        display[given_mask] = puzzle_np[given_mask]
 
-        sol_np = show_solutions[i] if show_solutions is not None else None
-        empty_mask = ~given_mask
-        n_empty = empty_mask.sum()
-        n_correct = ((display == sol_np) & empty_mask).sum() if sol_np is not None else "?"
-        is_valid = validate_sudoku(display, grid_size)
+        if is_maze:
+            sol_np = show_solutions[i]
+            n_total = pred_np.size
+            n_correct = (pred_np == sol_np).sum()
+            print(f"\n  -- Maze {i+1} -- {n_correct}/{n_total} cells correct --")
+            print_maze(puzzle_np, pred_grid=pred_np, solution=sol_np,
+                       title="Model prediction:")
+            print_maze(puzzle_np, pred_grid=sol_np, solution=sol_np,
+                       title="Ground truth:")
+        else:
+            given_mask = (puzzle_np != 0)
+            # Merge givens into prediction display
+            display = pred_np.copy()
+            display[given_mask] = puzzle_np[given_mask]
 
-        print(f"\n  -- Puzzle {i+1} ({'valid' if is_valid else 'invalid'}) "
-              f"-- {n_correct}/{n_empty} empty cells correct --")
-        print_grid(display, given_mask=given_mask, solution=sol_np,
-                   title="Model prediction:")
-        if sol_np is not None:
+            sol_np = show_solutions[i]
+            empty_mask = ~given_mask
+            n_empty = empty_mask.sum()
+            n_correct = ((display == sol_np) & empty_mask).sum()
+            is_valid = validate_sudoku(display, grid_size)
+
+            print(f"\n  -- Puzzle {i+1} ({'valid' if is_valid else 'invalid'}) "
+                  f"-- {n_correct}/{n_empty} empty cells correct --")
+            print_grid(display, given_mask=given_mask, solution=sol_np,
+                       title="Model prediction:")
             print_grid(sol_np, given_mask=given_mask, solution=sol_np,
                        title="Ground truth:")
 

@@ -32,6 +32,7 @@ from hrm.data.weighted_maze_generator import (
 # Token encoding tests
 # =============================================================================
 
+
 class TestTokenEncoding:
     """Verify that token constants are unique and correctly defined."""
 
@@ -39,8 +40,7 @@ class TestTokenEncoding:
         tokens = {WALL, PATH, START, GOAL}
         weight_tokens = set(range(MIN_WEIGHT, MAX_WEIGHT + 1))
         assert len(tokens) == 4, "Core tokens must be unique"
-        assert tokens.isdisjoint(weight_tokens), \
-            "Weight tokens must not overlap with core tokens"
+        assert tokens.isdisjoint(weight_tokens), "Weight tokens must not overlap with core tokens"
 
     def test_token_values(self):
         assert WALL == 0
@@ -63,6 +63,7 @@ class TestTokenEncoding:
 # =============================================================================
 # Grid structure tests
 # =============================================================================
+
 
 class TestGridStructure:
     """Verify maze grid structural integrity."""
@@ -89,11 +90,11 @@ class TestGridStructure:
         # Top and bottom rows
         for c in range(n):
             assert puzzle[0][c] == WALL, f"Top border at col {c} is not WALL"
-            assert puzzle[n-1][c] == WALL, f"Bottom border at col {c} is not WALL"
+            assert puzzle[n - 1][c] == WALL, f"Bottom border at col {c} is not WALL"
         # Left and right columns
         for r in range(n):
             assert puzzle[r][0] == WALL, f"Left border at row {r} is not WALL"
-            assert puzzle[r][n-1] == WALL, f"Right border at row {r} is not WALL"
+            assert puzzle[r][n - 1] == WALL, f"Right border at row {r} is not WALL"
 
     def test_exactly_one_start_and_goal(self, gen):
         result = gen.create_puzzle()
@@ -131,6 +132,7 @@ class TestGridStructure:
 # Dijkstra solver tests
 # =============================================================================
 
+
 class TestDijkstraSolver:
     """Test the Dijkstra pathfinding implementation with known mazes."""
 
@@ -147,11 +149,11 @@ class TestDijkstraSolver:
         # Override grid_size for this test
         gen.grid_size = 5
         grid = [
-            [WALL, WALL,  WALL, WALL, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
             [WALL, START, PATH, PATH, WALL],
-            [WALL, WALL,  WALL, PATH, WALL],
-            [WALL, PATH,  PATH, GOAL, WALL],
-            [WALL, WALL,  WALL, WALL, WALL],
+            [WALL, WALL, WALL, PATH, WALL],
+            [WALL, PATH, PATH, GOAL, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
         ]
         start = (1, 1)
         goal = (3, 3)
@@ -169,13 +171,13 @@ class TestDijkstraSolver:
         """
         gen = WeightedMazeGenerator(grid_size=7, seed=0)
         grid = [
-            [WALL, WALL,  WALL, WALL, WALL, WALL, WALL],
-            [WALL, START, PATH, 9,    PATH, GOAL, WALL],
-            [WALL, PATH,  WALL, WALL, WALL, PATH, WALL],
-            [WALL, PATH,  PATH, PATH, PATH, PATH, WALL],
-            [WALL, PATH,  WALL, WALL, WALL, PATH, WALL],
-            [WALL, PATH,  PATH, PATH, PATH, PATH, WALL],
-            [WALL, WALL,  WALL, WALL, WALL, WALL, WALL],
+            [WALL, WALL, WALL, WALL, WALL, WALL, WALL],
+            [WALL, START, PATH, 9, PATH, GOAL, WALL],
+            [WALL, PATH, WALL, WALL, WALL, PATH, WALL],
+            [WALL, PATH, PATH, PATH, PATH, PATH, WALL],
+            [WALL, PATH, WALL, WALL, WALL, PATH, WALL],
+            [WALL, PATH, PATH, PATH, PATH, PATH, WALL],
+            [WALL, WALL, WALL, WALL, WALL, WALL, WALL],
         ]
         start = (1, 1)
         goal = (1, 5)
@@ -190,11 +192,11 @@ class TestDijkstraSolver:
         gen = WeightedMazeGenerator(grid_size=7, seed=0)
         gen.grid_size = 5
         grid = [
-            [WALL, WALL,  WALL, WALL, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
             [WALL, START, PATH, WALL, WALL],
-            [WALL, WALL,  WALL, WALL, WALL],
-            [WALL, WALL,  WALL, GOAL, WALL],
-            [WALL, WALL,  WALL, WALL, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
+            [WALL, WALL, WALL, GOAL, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
         ]
         path = gen.solve_dijkstra(grid, (1, 1), (3, 3))
         assert path is None
@@ -204,11 +206,11 @@ class TestDijkstraSolver:
         gen = WeightedMazeGenerator(grid_size=7, seed=0)
         gen.grid_size = 5
         grid = [
-            [WALL, WALL,  WALL, WALL, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
             [WALL, START, GOAL, PATH, WALL],
-            [WALL, PATH,  PATH, PATH, WALL],
-            [WALL, PATH,  PATH, PATH, WALL],
-            [WALL, WALL,  WALL, WALL, WALL],
+            [WALL, PATH, PATH, PATH, WALL],
+            [WALL, PATH, PATH, PATH, WALL],
+            [WALL, WALL, WALL, WALL, WALL],
         ]
         path = gen.solve_dijkstra(grid, (1, 1), (1, 2))
         assert path is not None
@@ -219,6 +221,7 @@ class TestDijkstraSolver:
 # =============================================================================
 # Solution validity tests
 # =============================================================================
+
 
 class TestSolutionValidity:
     """Test that generated solutions are correct and optimal."""
@@ -239,8 +242,8 @@ class TestSolutionValidity:
         result = gen.create_puzzle()
         assert result is not None
         _puzzle, solution, meta = result
-        sr, sc = meta['start']
-        gr, gc = meta['goal']
+        sr, sc = meta["start"]
+        gr, gc = meta["goal"]
         assert solution[sr][sc] == 1, "Start must be on solution path"
         assert solution[gr][gc] == 1, "Goal must be on solution path"
 
@@ -256,7 +259,7 @@ class TestSolutionValidity:
                     path_cells.add((r, c))
 
         # BFS from start
-        start = meta['start']
+        start = meta["start"]
         visited = {start}
         queue = [start]
         while queue:
@@ -276,17 +279,19 @@ class TestSolutionValidity:
         puzzle, solution, meta = result
 
         # Re-solve independently
-        path = gen.solve_dijkstra(puzzle, meta['start'], meta['goal'])
+        path = gen.solve_dijkstra(puzzle, meta["start"], meta["goal"])
         assert path is not None
 
         expected_cost = gen._compute_path_cost(puzzle, path)
         actual_cost = sum(
             max(gen._cell_cost(puzzle[r][c]), 0)
-            for r in range(gen.grid_size) for c in range(gen.grid_size)
+            for r in range(gen.grid_size)
+            for c in range(gen.grid_size)
             if solution[r][c] == 1
         )
-        assert actual_cost == expected_cost, \
-            f"Solution cost {actual_cost} != optimal cost {expected_cost}"
+        assert (
+            actual_cost == expected_cost
+        ), f"Solution cost {actual_cost} != optimal cost {expected_cost}"
 
     def test_is_valid_solution_method(self, gen):
         result = gen.create_puzzle()
@@ -302,8 +307,7 @@ class TestSolutionValidity:
         for r in range(gen.grid_size):
             for c in range(gen.grid_size):
                 if solution[r][c] == 1:
-                    assert puzzle[r][c] != WALL, \
-                        f"Solution cell ({r},{c}) is a wall"
+                    assert puzzle[r][c] != WALL, f"Solution cell ({r},{c}) is a wall"
 
     def test_unique_optimal_path(self, gen):
         """Generated puzzles must have exactly one cheapest path."""
@@ -311,7 +315,7 @@ class TestSolutionValidity:
         assert result is not None
         puzzle, _solution, meta = result
         assert gen._has_unique_optimal_path(
-            puzzle, meta['start'], meta['goal']
+            puzzle, meta["start"], meta["goal"]
         ), "Puzzle must have exactly one optimal path"
 
     def test_unique_optimal_path_multiple_puzzles(self):
@@ -322,7 +326,7 @@ class TestSolutionValidity:
             assert result is not None
             puzzle, _, meta = result
             assert gen._has_unique_optimal_path(
-                puzzle, meta['start'], meta['goal']
+                puzzle, meta["start"], meta["goal"]
             ), "Every generated puzzle must have a unique optimal path"
 
 
@@ -330,63 +334,65 @@ class TestSolutionValidity:
 # Dataset generation tests
 # =============================================================================
 
+
 class TestDatasetGeneration:
     """Test the full dataset generation pipeline."""
 
     def test_output_shapes(self):
         dataset = generate_weighted_maze_dataset(
-            num_puzzles=5, grid_size=11,
-            seed=42, verbose=False
+            num_puzzles=5, grid_size=11, seed=42, verbose=False
         )
-        assert dataset['problems'].shape == (5, 11, 11)
-        assert dataset['solutions'].shape == (5, 11, 11)
-        assert len(dataset['metadata']) == 5
+        assert dataset["problems"].shape == (5, 11, 11)
+        assert dataset["solutions"].shape == (5, 11, 11)
+        assert len(dataset["metadata"]) == 5
 
     def test_output_dtype(self):
-        dataset = generate_weighted_maze_dataset(
-            num_puzzles=3, grid_size=9,
-            seed=42, verbose=False
-        )
-        assert dataset['problems'].dtype == np.int8
-        assert dataset['solutions'].dtype == np.int8
+        dataset = generate_weighted_maze_dataset(num_puzzles=3, grid_size=9, seed=42, verbose=False)
+        assert dataset["problems"].dtype == np.int8
+        assert dataset["solutions"].dtype == np.int8
 
     def test_metadata_fields(self):
         dataset = generate_weighted_maze_dataset(
-            num_puzzles=3, grid_size=11,
-            seed=42, verbose=False
+            num_puzzles=3, grid_size=11, seed=42, verbose=False
         )
         required_fields = {
-            'puzzle_id', 'grid_size', 'path_length',
-            'path_cost', 'start', 'goal', 'num_walls', 'num_weighted'
+            "puzzle_id",
+            "grid_size",
+            "path_length",
+            "path_cost",
+            "start",
+            "goal",
+            "num_walls",
+            "num_weighted",
         }
-        for meta in dataset['metadata']:
-            assert required_fields.issubset(meta.keys()), \
-                f"Missing fields: {required_fields - meta.keys()}"
+        for meta in dataset["metadata"]:
+            assert required_fields.issubset(
+                meta.keys()
+            ), f"Missing fields: {required_fields - meta.keys()}"
 
     def test_uniqueness(self):
         dataset = generate_weighted_maze_dataset(
-            num_puzzles=10, grid_size=11,
-            seed=42, verbose=False, ensure_unique=True
+            num_puzzles=10, grid_size=11, seed=42, verbose=False, ensure_unique=True
         )
         seen = set()
-        for i in range(len(dataset['problems'])):
-            key = tuple(map(tuple, dataset['problems'][i]))
+        for i in range(len(dataset["problems"])):
+            key = tuple(map(tuple, dataset["problems"][i]))
             assert key not in seen, f"Duplicate puzzle at index {i}"
             seen.add(key)
 
     def test_even_grid_size_forced_odd(self):
         dataset = generate_weighted_maze_dataset(
-            num_puzzles=2, grid_size=10,
-            seed=42, verbose=False
+            num_puzzles=2, grid_size=10, seed=42, verbose=False
         )
         # Should be 11x11 (forced odd)
-        assert dataset['problems'].shape[1] == 11
-        assert dataset['problems'].shape[2] == 11
+        assert dataset["problems"].shape[1] == 11
+        assert dataset["problems"].shape[2] == 11
 
 
 # =============================================================================
 # Reproducibility tests
 # =============================================================================
+
 
 class TestReproducibility:
     """Test that seeded generation is deterministic."""
@@ -409,17 +415,16 @@ class TestReproducibility:
         assert r1[0] != r2[0], "Different seeds should produce different puzzles"
 
     def test_dataset_reproducibility(self):
-        d1 = generate_weighted_maze_dataset(
-            num_puzzles=5, grid_size=11, seed=42, verbose=False)
-        d2 = generate_weighted_maze_dataset(
-            num_puzzles=5, grid_size=11, seed=42, verbose=False)
-        np.testing.assert_array_equal(d1['problems'], d2['problems'])
-        np.testing.assert_array_equal(d1['solutions'], d2['solutions'])
+        d1 = generate_weighted_maze_dataset(num_puzzles=5, grid_size=11, seed=42, verbose=False)
+        d2 = generate_weighted_maze_dataset(num_puzzles=5, grid_size=11, seed=42, verbose=False)
+        np.testing.assert_array_equal(d1["problems"], d2["problems"])
+        np.testing.assert_array_equal(d1["solutions"], d2["solutions"])
 
 
 # =============================================================================
 # Visualization test
 # =============================================================================
+
 
 class TestVisualization:
     """Test text rendering of mazes."""
@@ -433,15 +438,16 @@ class TestVisualization:
         assert isinstance(text, str)
         assert len(text) > 0
         # Should contain S and G
-        assert 'S' in text
-        assert 'G' in text
+        assert "S" in text
+        assert "G" in text
         # Should contain path markers
-        assert '*' in text
+        assert "*" in text
 
 
 # =============================================================================
 # Integration: end-to-end HRM compatibility check
 # =============================================================================
+
 
 class TestHRMCompatibility:
     """
@@ -455,27 +461,27 @@ class TestHRMCompatibility:
 
     def test_vocabulary_is_bounded(self):
         dataset = generate_weighted_maze_dataset(
-            num_puzzles=10, grid_size=15,
-            seed=42, verbose=False
+            num_puzzles=10, grid_size=15, seed=42, verbose=False
         )
-        unique_problem_tokens = set(np.unique(dataset['problems']))
-        unique_solution_tokens = set(np.unique(dataset['solutions']))
+        unique_problem_tokens = set(np.unique(dataset["problems"]))
+        unique_solution_tokens = set(np.unique(dataset["solutions"]))
 
         expected_problem_tokens = {WALL, PATH, START, GOAL} | set(range(MIN_WEIGHT, MAX_WEIGHT + 1))
-        assert unique_problem_tokens.issubset(expected_problem_tokens), \
-            f"Unexpected tokens in problems: {unique_problem_tokens - expected_problem_tokens}"
+        assert unique_problem_tokens.issubset(
+            expected_problem_tokens
+        ), f"Unexpected tokens in problems: {unique_problem_tokens - expected_problem_tokens}"
 
-        assert unique_solution_tokens.issubset({0, 1}), \
-            f"Solution tokens must be binary, got {unique_solution_tokens}"
+        assert unique_solution_tokens.issubset(
+            {0, 1}
+        ), f"Solution tokens must be binary, got {unique_solution_tokens}"
 
     def test_flattening_preserves_info(self):
         """HRM flattens 2D grids to 1D sequences. Verify round-trip."""
         dataset = generate_weighted_maze_dataset(
-            num_puzzles=3, grid_size=11,
-            seed=42, verbose=False
+            num_puzzles=3, grid_size=11, seed=42, verbose=False
         )
-        for i in range(len(dataset['problems'])):
-            grid_2d = dataset['problems'][i]
+        for i in range(len(dataset["problems"])):
+            grid_2d = dataset["problems"][i]
             flat = grid_2d.flatten()
             restored = flat.reshape(grid_2d.shape)
             np.testing.assert_array_equal(grid_2d, restored)
@@ -485,14 +491,13 @@ class TestHRMCompatibility:
         # Problem tokens: 0-9 (10 tokens)
         # Solution tokens: 0-1 (2 tokens)
         # Combined: 10 unique values
-        assert MAX_WEIGHT + 1 <= 16, \
-            "Vocabulary should be small for HRM (typically < 16 tokens)"
+        assert MAX_WEIGHT + 1 <= 16, "Vocabulary should be small for HRM (typically < 16 tokens)"
 
 
 # =============================================================================
 # Run tests
 # =============================================================================
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run with pytest if available, otherwise manual run
-    raise SystemExit(pytest.main([__file__, '-v', '--tb=short']))
+    raise SystemExit(pytest.main([__file__, "-v", "--tb=short"]))

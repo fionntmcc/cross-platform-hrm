@@ -35,14 +35,13 @@ from collections import defaultdict
 
 import numpy as np
 
-
 # =============================================================================
 # Token definitions — each cell type has a unique integer ID
 # =============================================================================
-WALL  = 0
-PATH  = 1   # traversable, cost 1
+WALL = 0
+PATH = 1  # traversable, cost 1
 START = 2
-GOAL  = 3
+GOAL = 3
 # Tokens 4..MAX_WEIGHT represent weighted traversable cells (cost = token value)
 MIN_WEIGHT = 4
 MAX_WEIGHT = 9
@@ -65,10 +64,10 @@ class WeightedMazeGenerator:
     # weight_frac: fraction of non-wall interior cells that get random weights
     # min_path_len_ratio: minimum optimal path length as fraction of grid_size
     MAZE_CONFIG = {
-        'wall_frac': (0.25, 0.40),
-        'weight_frac': (0.20, 0.45),
-        'min_path_len_ratio': 2.0,
-        'max_weight': MAX_WEIGHT,  # weights 4-9
+        "wall_frac": (0.25, 0.40),
+        "weight_frac": (0.20, 0.45),
+        "min_path_len_ratio": 2.0,
+        "max_weight": MAX_WEIGHT,  # weights 4-9
     }
 
     def __init__(self, grid_size: int = 15, seed: Optional[int] = None):
@@ -166,8 +165,7 @@ class WeightedMazeGenerator:
         for i in range(min(num_to_open, len(candidates))):
             grid[candidates[i][0]][candidates[i][1]] = PATH
 
-    def _place_weights(self, grid: List[List[int]], weight_frac: float,
-                       max_weight: int) -> None:
+    def _place_weights(self, grid: List[List[int]], weight_frac: float, max_weight: int) -> None:
         """
         Assign random weights to a fraction of PATH cells.
 
@@ -248,9 +246,9 @@ class WeightedMazeGenerator:
         # Weighted cell: cost equals the token value
         return token
 
-    def solve_dijkstra(self, grid: List[List[int]],
-                       start: Tuple[int, int],
-                       goal: Tuple[int, int]) -> Optional[List[Tuple[int, int]]]:
+    def solve_dijkstra(
+        self, grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int, int]
+    ) -> Optional[List[Tuple[int, int]]]:
         """
         Find the minimum-cost path from start to goal using Dijkstra's algorithm.
 
@@ -264,7 +262,7 @@ class WeightedMazeGenerator:
             or None if no path exists.
         """
         n = self.grid_size
-        dist = defaultdict(lambda: float('inf'))
+        dist = defaultdict(lambda: float("inf"))
         dist[start] = 0
         prev: Dict[Tuple[int, int], Optional[Tuple[int, int]]] = {start: None}
         pq = [(0, start)]
@@ -299,9 +297,9 @@ class WeightedMazeGenerator:
 
         return None  # no path
 
-    def _has_unique_optimal_path(self, grid: List[List[int]],
-                                  start: Tuple[int, int],
-                                  goal: Tuple[int, int]) -> bool:
+    def _has_unique_optimal_path(
+        self, grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int, int]
+    ) -> bool:
         """
         Check whether there is exactly one minimum-cost path from start to goal.
 
@@ -317,7 +315,7 @@ class WeightedMazeGenerator:
             True if exactly one optimal path exists, False otherwise.
         """
         n = self.grid_size
-        dist: Dict[Tuple[int, int], float] = defaultdict(lambda: float('inf'))
+        dist: Dict[Tuple[int, int], float] = defaultdict(lambda: float("inf"))
         dist[start] = 0
         pq = [(0, start)]
         visited: Set[Tuple[int, int]] = set()
@@ -339,7 +337,7 @@ class WeightedMazeGenerator:
                         dist[(nr, nc)] = new_dist
                         heapq.heappush(pq, (new_dist, (nr, nc)))
 
-        if dist[goal] == float('inf'):
+        if dist[goal] == float("inf"):
             return False  # no path at all
 
         # Phase 2: count paths on the shortest-path DAG
@@ -381,7 +379,9 @@ class WeightedMazeGenerator:
     # Puzzle creation
     # -----------------------------------------------------------------
 
-    def create_puzzle(self, max_attempts: int = 50) -> Optional[Tuple[List[List[int]], List[List[int]], Dict[str, Any]]]:
+    def create_puzzle(
+        self, max_attempts: int = 50
+    ) -> Optional[Tuple[List[List[int]], List[List[int]], Dict[str, Any]]]:
         """
         Create a weighted maze puzzle with its optimal-path solution.
 
@@ -392,10 +392,10 @@ class WeightedMazeGenerator:
             (puzzle_grid, solution_grid, metadata) or None if generation fails.
         """
         config = self.MAZE_CONFIG
-        wall_frac_lo, wall_frac_hi = config['wall_frac']
-        wt_frac_lo, wt_frac_hi = config['weight_frac']
-        min_path_len = int(config['min_path_len_ratio'] * self.grid_size)
-        max_weight = config['max_weight']
+        wall_frac_lo, wall_frac_hi = config["wall_frac"]
+        wt_frac_lo, wt_frac_hi = config["weight_frac"]
+        min_path_len = int(config["min_path_len_ratio"] * self.grid_size)
+        max_weight = config["max_weight"]
 
         for attempt in range(max_attempts):
             # 1. Generate base perfect maze
@@ -436,14 +436,14 @@ class WeightedMazeGenerator:
             total_cost = self._compute_path_cost(grid, path)
 
             metadata = {
-                'grid_size': self.grid_size,
-                'path_length': len(path),
-                'path_cost': total_cost,
-                'start': start,
-                'goal': goal_pos,
-                'num_walls': sum(1 for r in grid for c in r if c == WALL),
-                'num_weighted': sum(1 for r in grid for c in r if c >= MIN_WEIGHT),
-                'attempt': attempt + 1,
+                "grid_size": self.grid_size,
+                "path_length": len(path),
+                "path_cost": total_cost,
+                "start": start,
+                "goal": goal_pos,
+                "num_walls": sum(1 for r in grid for c in r if c == WALL),
+                "num_weighted": sum(1 for r in grid for c in r if c >= MIN_WEIGHT),
+                "attempt": attempt + 1,
             }
 
             return grid, solution, metadata
@@ -485,14 +485,14 @@ class WeightedMazeGenerator:
             # Only add wall if it doesn't disconnect the grid too much
             # Simple heuristic: ensure cell has at least 2 adjacent non-wall neighbors
             adj_open = sum(
-                1 for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                1
+                for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
                 if 0 <= r + dr < n and 0 <= c + dc < n and grid[r + dr][c + dc] != WALL
             )
             if adj_open >= 3:  # safe to wall off
                 grid[r][c] = WALL
 
-    def _compute_path_cost(self, grid: List[List[int]],
-                           path: List[Tuple[int, int]]) -> int:
+    def _compute_path_cost(self, grid: List[List[int]], path: List[Tuple[int, int]]) -> int:
         """Compute the total traversal cost of a path."""
         total = 0
         for r, c in path:
@@ -595,10 +595,7 @@ class WeightedMazeGenerator:
             return False
 
         optimal_cost = self._compute_path_cost(grid, optimal)
-        solution_cost = sum(
-            max(self._cell_cost(grid[r][c]), 0)
-            for r, c in path_cells
-        )
+        solution_cost = sum(max(self._cell_cost(grid[r][c]), 0) for r, c in path_cells)
 
         return solution_cost == optimal_cost
 
@@ -627,31 +624,32 @@ class WeightedMazeGenerator:
                 on_path = solution is not None and solution[r][c] == 1
                 token = grid[r][c]
                 if on_path and token not in (START, GOAL):
-                    row_str.append(' *')
+                    row_str.append(" *")
                 elif token == WALL:
-                    row_str.append('██')
+                    row_str.append("██")
                 elif token == PATH:
-                    row_str.append(' ·')
+                    row_str.append(" ·")
                 elif token == START:
-                    row_str.append(' S')
+                    row_str.append(" S")
                 elif token == GOAL:
-                    row_str.append(' G')
+                    row_str.append(" G")
                 else:
-                    row_str.append(f' {token}')
-            lines.append(''.join(row_str))
-        return '\n'.join(lines)
+                    row_str.append(f" {token}")
+            lines.append("".join(row_str))
+        return "\n".join(lines)
 
 
 # =========================================================================
 # Dataset generation (mirrors Sudoku generator API)
 # =========================================================================
 
+
 def generate_weighted_maze_dataset(
     num_puzzles: int = 100,
     grid_size: int = 15,
     seed: Optional[int] = None,
     verbose: bool = True,
-    ensure_unique: bool = True
+    ensure_unique: bool = True,
 ) -> Dict[str, Any]:
     """
     Generate a dataset of weighted maze puzzles with optimal-path solutions.
@@ -701,7 +699,7 @@ def generate_weighted_maze_dataset(
                 continue
             seen_puzzles.add(puzzle_key)
 
-        meta['puzzle_id'] = generated
+        meta["puzzle_id"] = generated
         problems.append(puzzle)
         solutions.append(solution)
         metadata.append(meta)
@@ -711,22 +709,25 @@ def generate_weighted_maze_dataset(
             print(f"Generated {generated}/{num_puzzles} puzzles...")
 
     if generated < num_puzzles:
-        print(f"Warning: Only generated {generated}/{num_puzzles} unique puzzles "
-              f"after {max_attempts} attempts")
+        print(
+            f"Warning: Only generated {generated}/{num_puzzles} unique puzzles "
+            f"after {max_attempts} attempts"
+        )
 
     if verbose:
-        print(f"Successfully generated {generated} puzzles "
-              f"(grid: {actual_grid_size}x{actual_grid_size})")
+        print(
+            f"Successfully generated {generated} puzzles "
+            f"(grid: {actual_grid_size}x{actual_grid_size})"
+        )
 
     return {
-        'problems': np.array(problems, dtype=np.int8),
-        'solutions': np.array(solutions, dtype=np.int8),
-        'metadata': metadata
+        "problems": np.array(problems, dtype=np.int8),
+        "solutions": np.array(solutions, dtype=np.int8),
+        "metadata": metadata,
     }
 
 
-def save_dataset(dataset: Dict[str, Any], filename_prefix: str,
-                 save_format: str = 'npz') -> None:
+def save_dataset(dataset: Dict[str, Any], filename_prefix: str, save_format: str = "npz") -> None:
     """
     Save the dataset to files.
 
@@ -736,38 +737,41 @@ def save_dataset(dataset: Dict[str, Any], filename_prefix: str,
         save_format: 'npz' (compressed numpy) or 'npy' (separate files).
     """
     output_path = Path(filename_prefix)
-    if output_path.parent and str(output_path.parent) != '.':
+    if output_path.parent and str(output_path.parent) != ".":
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if save_format == 'npz':
+    if save_format == "npz":
         np.savez_compressed(
-            f'{filename_prefix}.npz',
-            problems=dataset['problems'],
-            solutions=dataset['solutions']
+            f"{filename_prefix}.npz", problems=dataset["problems"], solutions=dataset["solutions"]
         )
         print(f"Saved to {filename_prefix}.npz")
-    elif save_format == 'npy':
-        np.save(f'{filename_prefix}_problems.npy', dataset['problems'])
-        np.save(f'{filename_prefix}_solutions.npy', dataset['solutions'])
-        print(f"Saved to {filename_prefix}_problems.npy and "
-              f"{filename_prefix}_solutions.npy")
+    elif save_format == "npy":
+        np.save(f"{filename_prefix}_problems.npy", dataset["problems"])
+        np.save(f"{filename_prefix}_solutions.npy", dataset["solutions"])
+        print(f"Saved to {filename_prefix}_problems.npy and " f"{filename_prefix}_solutions.npy")
 
     # Save metadata
-    with open(f'{filename_prefix}_metadata.txt', 'w') as f:
-        if dataset['metadata']:
-            first = dataset['metadata'][0]
-            f.write(f"# Weighted Maze Dataset: {len(dataset['metadata'])} puzzles, "
-                    f"grid_size={first['grid_size']}\n")
-            f.write(f"# Token encoding: 0=WALL, 1=PATH(cost1), 2=START, "
-                    f"3=GOAL, 4-9=WEIGHTED(cost=token)\n")
+    with open(f"{filename_prefix}_metadata.txt", "w") as f:
+        if dataset["metadata"]:
+            first = dataset["metadata"][0]
+            f.write(
+                f"# Weighted Maze Dataset: {len(dataset['metadata'])} puzzles, "
+                f"grid_size={first['grid_size']}\n"
+            )
+            f.write(
+                f"# Token encoding: 0=WALL, 1=PATH(cost1), 2=START, "
+                f"3=GOAL, 4-9=WEIGHTED(cost=token)\n"
+            )
             f.write(f"# Solution encoding: 0=not_on_path, 1=on_optimal_path\n\n")
 
-        for meta in dataset['metadata']:
-            f.write(f"Puzzle {meta['puzzle_id']}: "
-                    f"path_length={meta['path_length']}, "
-                    f"path_cost={meta['path_cost']}, "
-                    f"num_walls={meta['num_walls']}, "
-                    f"num_weighted={meta['num_weighted']}\n")
+        for meta in dataset["metadata"]:
+            f.write(
+                f"Puzzle {meta['puzzle_id']}: "
+                f"path_length={meta['path_length']}, "
+                f"path_cost={meta['path_cost']}, "
+                f"num_walls={meta['num_walls']}, "
+                f"num_weighted={meta['num_weighted']}\n"
+            )
     print(f"Metadata saved to {filename_prefix}_metadata.txt")
 
 
@@ -775,9 +779,10 @@ def save_dataset(dataset: Dict[str, Any], filename_prefix: str,
 # CLI
 # =========================================================================
 
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description='Generate weighted maze puzzle datasets for HRM training',
+        description="Generate weighted maze puzzle datasets for HRM training",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -794,20 +799,25 @@ Token Encoding:
 Solution Encoding:
   0 = not on optimal path
   1 = on optimal path
-"""
+""",
     )
-    parser.add_argument('--num', '-n', type=int, default=100,
-                        help='Number of puzzles to generate (default: 100)')
-    parser.add_argument('--size', '-s', type=int, default=15,
-                        help='Grid size (>= 7, forced odd; default: 15)')
-    parser.add_argument('--seed', type=int, default=None,
-                        help='Random seed for reproducibility')
-    parser.add_argument('--output', '-o', type=str, default=None,
-                        help='Output filename prefix')
-    parser.add_argument('--format', '-f', type=str, choices=['npz', 'npy'],
-                        default='npz', help='Output format (default: npz)')
-    parser.add_argument('--quiet', '-q', action='store_true',
-                        help='Suppress progress output')
+    parser.add_argument(
+        "--num", "-n", type=int, default=100, help="Number of puzzles to generate (default: 100)"
+    )
+    parser.add_argument(
+        "--size", "-s", type=int, default=15, help="Grid size (>= 7, forced odd; default: 15)"
+    )
+    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
+    parser.add_argument("--output", "-o", type=str, default=None, help="Output filename prefix")
+    parser.add_argument(
+        "--format",
+        "-f",
+        type=str,
+        choices=["npz", "npy"],
+        default="npz",
+        help="Output format (default: npz)",
+    )
+    parser.add_argument("--quiet", "-q", action="store_true", help="Suppress progress output")
     return parser.parse_args()
 
 
@@ -816,18 +826,14 @@ def main() -> None:
     args = parse_args()
 
     if args.output is None:
-        args.output = f'weighted_maze_{args.size}x{args.size}'
+        args.output = f"weighted_maze_{args.size}x{args.size}"
 
-    print(f"Generating {args.num} {args.size}x{args.size} "
-          f"weighted maze puzzles...")
+    print(f"Generating {args.num} {args.size}x{args.size} " f"weighted maze puzzles...")
     if args.seed is not None:
         print(f"Using random seed: {args.seed}")
 
     dataset = generate_weighted_maze_dataset(
-        num_puzzles=args.num,
-        grid_size=args.size,
-        seed=args.seed,
-        verbose=not args.quiet
+        num_puzzles=args.num, grid_size=args.size, seed=args.seed, verbose=not args.quiet
     )
 
     save_dataset(dataset, args.output, args.format)
@@ -839,17 +845,23 @@ def main() -> None:
     print(f"  Problems shape: {dataset['problems'].shape}")
     print(f"  Solutions shape: {dataset['solutions'].shape}")
 
-    path_lengths = [m['path_length'] for m in dataset['metadata']]
-    path_costs = [m['path_cost'] for m in dataset['metadata']]
-    num_weighted = [m['num_weighted'] for m in dataset['metadata']]
+    path_lengths = [m["path_length"] for m in dataset["metadata"]]
+    path_costs = [m["path_cost"] for m in dataset["metadata"]]
+    num_weighted = [m["num_weighted"] for m in dataset["metadata"]]
 
-    print(f"  Path length: min={min(path_lengths)}, max={max(path_lengths)}, "
-          f"avg={sum(path_lengths)/len(path_lengths):.1f}")
-    print(f"  Path cost:   min={min(path_costs)}, max={max(path_costs)}, "
-          f"avg={sum(path_costs)/len(path_costs):.1f}")
-    print(f"  Weighted cells: min={min(num_weighted)}, max={max(num_weighted)}, "
-          f"avg={sum(num_weighted)/len(num_weighted):.1f}")
+    print(
+        f"  Path length: min={min(path_lengths)}, max={max(path_lengths)}, "
+        f"avg={sum(path_lengths)/len(path_lengths):.1f}"
+    )
+    print(
+        f"  Path cost:   min={min(path_costs)}, max={max(path_costs)}, "
+        f"avg={sum(path_costs)/len(path_costs):.1f}"
+    )
+    print(
+        f"  Weighted cells: min={min(num_weighted)}, max={max(num_weighted)}, "
+        f"avg={sum(num_weighted)/len(num_weighted):.1f}"
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

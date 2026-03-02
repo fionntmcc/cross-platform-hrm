@@ -99,10 +99,14 @@ class PuzzleType(Enum):
 
 
 # Per-puzzle defaults
+# For maze: input vocab covers tokens 0-9 (WALL=0, PATH=1, START=2,
+# GOAL=3, weighted 4-9).  Output vocab is 2 (binary: on-path / not-on-path).
+MAZE_OUTPUT_VOCAB = 2
+
 PUZZLE_DEFAULTS = {
     PuzzleType.SUDOKU_4X4: {"vocab_size": 5, "seq_len": 16, "grid_size": 4},
     PuzzleType.SUDOKU_9X9: {"vocab_size": 10, "seq_len": 81, "grid_size": 9},
-    PuzzleType.MAZE: {"vocab_size": 4, "seq_len": None, "grid_size": None},
+    PuzzleType.MAZE: {"vocab_size": 10, "seq_len": 225, "grid_size": 15},
 }
 
 
@@ -349,7 +353,8 @@ class SimplifiedHRM(nn.Module):
         # Step 4: Tracking
         all_step_logits: list[torch.Tensor] = []
         step_predictions: list[torch.Tensor] = []
-        given_mask = x != 0  # True for given clues
+        is_maze = puzzle_type == PuzzleType.MAZE
+        given_mask = x != 0  # True for given clues (Sudoku only)
 
         # =================================================================
         # Step 5: Iterative reasoning with one-step gradient
@@ -389,7 +394,9 @@ class SimplifiedHRM(nn.Module):
             # Prediction feedback (self-conditioning)
             # Re-embed the model's current predictions merged with
             # original givens for the next reasoning step.
-            if use_feedback and not is_last_step:
+            # For maze: input (tokens 0-9) and output (binary 0/1) are
+            # different domains, so prediction feedback is skipped.
+            if use_feedback and not is_last_step and not is_maze:
                 with torch.no_grad():
                     preds = logits.argmax(dim=-1)
                     refined = torch.where(given_mask, x, preds)

@@ -26,12 +26,12 @@ Usage:
     python weighted_maze_generator.py --num 100 --size 15 --seed 42
 """
 
-import random
-import heapq
 import argparse
-from pathlib import Path
-from typing import Optional, Tuple, List, Dict, Any, Set
+import heapq
+import random
 from collections import defaultdict
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -70,7 +70,7 @@ class WeightedMazeGenerator:
         "max_weight": MAX_WEIGHT,  # weights 4-9
     }
 
-    def __init__(self, grid_size: int = 15, seed: Optional[int] = None):
+    def __init__(self, grid_size: int = 15, seed: int | None = None):
         """
         Initialize the weighted maze generator.
 
@@ -87,7 +87,7 @@ class WeightedMazeGenerator:
         self.seed = seed
         self._rng = random.Random(seed)
 
-    def set_seed(self, seed: Optional[int]) -> None:
+    def set_seed(self, seed: int | None) -> None:
         """Set a new random seed."""
         self.seed = seed
         self._rng = random.Random(seed)
@@ -96,7 +96,7 @@ class WeightedMazeGenerator:
     # Core maze generation
     # -----------------------------------------------------------------
 
-    def _generate_base_maze(self) -> List[List[int]]:
+    def _generate_base_maze(self) -> list[list[int]]:
         """
         Generate a base maze using randomized DFS (recursive backtracker).
 
@@ -114,7 +114,7 @@ class WeightedMazeGenerator:
         start_r, start_c = 1, 1
         grid[start_r][start_c] = PATH
         stack = [(start_r, start_c)]
-        visited: Set[Tuple[int, int]] = {(start_r, start_c)}
+        visited: set[tuple[int, int]] = {(start_r, start_c)}
 
         directions = [(0, 2), (0, -2), (2, 0), (-2, 0)]
 
@@ -138,7 +138,7 @@ class WeightedMazeGenerator:
 
         return grid
 
-    def _open_extra_passages(self, grid: List[List[int]], open_frac: float) -> None:
+    def _open_extra_passages(self, grid: list[list[int]], open_frac: float) -> None:
         """
         Remove some walls to create multiple route options.
 
@@ -165,7 +165,7 @@ class WeightedMazeGenerator:
         for i in range(min(num_to_open, len(candidates))):
             grid[candidates[i][0]][candidates[i][1]] = PATH
 
-    def _place_weights(self, grid: List[List[int]], weight_frac: float, max_weight: int) -> None:
+    def _place_weights(self, grid: list[list[int]], weight_frac: float, max_weight: int) -> None:
         """
         Assign random weights to a fraction of PATH cells.
 
@@ -188,7 +188,7 @@ class WeightedMazeGenerator:
             r, c = path_cells[i]
             grid[r][c] = self._rng.randint(MIN_WEIGHT, max_weight)
 
-    def _place_start_goal(self, grid: List[List[int]]) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    def _place_start_goal(self, grid: list[list[int]]) -> tuple[tuple[int, int], tuple[int, int]]:
         """
         Place START and GOAL on traversable cells, maximizing their distance.
 
@@ -247,8 +247,8 @@ class WeightedMazeGenerator:
         return token
 
     def solve_dijkstra(
-        self, grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int, int]
-    ) -> Optional[List[Tuple[int, int]]]:
+        self, grid: list[list[int]], start: tuple[int, int], goal: tuple[int, int]
+    ) -> list[tuple[int, int]] | None:
         """
         Find the minimum-cost path from start to goal using Dijkstra's algorithm.
 
@@ -264,9 +264,9 @@ class WeightedMazeGenerator:
         n = self.grid_size
         dist = defaultdict(lambda: float("inf"))
         dist[start] = 0
-        prev: Dict[Tuple[int, int], Optional[Tuple[int, int]]] = {start: None}
+        prev: dict[tuple[int, int], tuple[int, int] | None] = {start: None}
         pq = [(0, start)]
-        visited: Set[Tuple[int, int]] = set()
+        visited: set[tuple[int, int]] = set()
 
         while pq:
             d, (r, c) = heapq.heappop(pq)
@@ -298,7 +298,7 @@ class WeightedMazeGenerator:
         return None  # no path
 
     def _has_unique_optimal_path(
-        self, grid: List[List[int]], start: Tuple[int, int], goal: Tuple[int, int]
+        self, grid: list[list[int]], start: tuple[int, int], goal: tuple[int, int]
     ) -> bool:
         """
         Check whether there is exactly one minimum-cost path from start to goal.
@@ -315,10 +315,10 @@ class WeightedMazeGenerator:
             True if exactly one optimal path exists, False otherwise.
         """
         n = self.grid_size
-        dist: Dict[Tuple[int, int], float] = defaultdict(lambda: float("inf"))
+        dist: dict[tuple[int, int], float] = defaultdict(lambda: float("inf"))
         dist[start] = 0
         pq = [(0, start)]
-        visited: Set[Tuple[int, int]] = set()
+        visited: set[tuple[int, int]] = set()
 
         # Phase 1: Dijkstra to get shortest distances to all reachable cells
         while pq:
@@ -342,7 +342,7 @@ class WeightedMazeGenerator:
 
         # Phase 2: count paths on the shortest-path DAG
         # Process cells in order of increasing distance
-        num_paths: Dict[Tuple[int, int], int] = defaultdict(int)
+        num_paths: dict[tuple[int, int], int] = defaultdict(int)
         num_paths[start] = 1
 
         for cell in sorted(visited, key=lambda c: dist[c]):
@@ -359,7 +359,7 @@ class WeightedMazeGenerator:
 
         return num_paths[goal] == 1
 
-    def _path_to_solution_grid(self, path: List[Tuple[int, int]]) -> List[List[int]]:
+    def _path_to_solution_grid(self, path: list[tuple[int, int]]) -> list[list[int]]:
         """
         Convert a path to a binary solution grid.
 
@@ -381,7 +381,7 @@ class WeightedMazeGenerator:
 
     def create_puzzle(
         self, max_attempts: int = 50
-    ) -> Optional[Tuple[List[List[int]], List[List[int]], Dict[str, Any]]]:
+    ) -> tuple[list[list[int]], list[list[int]], dict[str, Any]] | None:
         """
         Create a weighted maze puzzle with its optimal-path solution.
 
@@ -450,7 +450,7 @@ class WeightedMazeGenerator:
 
         return None  # failed after max_attempts
 
-    def _adjust_wall_density(self, grid: List[List[int]], target_frac: float) -> None:
+    def _adjust_wall_density(self, grid: list[list[int]], target_frac: float) -> None:
         """
         Adjust interior wall density toward a target fraction.
 
@@ -492,7 +492,7 @@ class WeightedMazeGenerator:
             if adj_open >= 3:  # safe to wall off
                 grid[r][c] = WALL
 
-    def _compute_path_cost(self, grid: List[List[int]], path: List[Tuple[int, int]]) -> int:
+    def _compute_path_cost(self, grid: list[list[int]], path: list[tuple[int, int]]) -> int:
         """Compute the total traversal cost of a path."""
         total = 0
         for r, c in path:
@@ -504,7 +504,7 @@ class WeightedMazeGenerator:
     # Validation
     # -----------------------------------------------------------------
 
-    def is_valid_puzzle(self, grid: List[List[int]]) -> bool:
+    def is_valid_puzzle(self, grid: list[list[int]]) -> bool:
         """
         Validate that a puzzle grid is well-formed.
 
@@ -533,9 +533,8 @@ class WeightedMazeGenerator:
                     return False
                 # Border must be wall (except we allow start/goal on border edge
                 # for some variants — here we enforce walls)
-                if r == 0 or r == n - 1 or c == 0 or c == n - 1:
-                    if token != WALL:
-                        return False
+                if (r == 0 or r == n - 1 or c == 0 or c == n - 1) and token != WALL:
+                    return False
                 if token == START:
                     start_count += 1
                 elif token == GOAL:
@@ -543,7 +542,7 @@ class WeightedMazeGenerator:
 
         return start_count == 1 and goal_count == 1
 
-    def is_valid_solution(self, grid: List[List[int]], solution: List[List[int]]) -> bool:
+    def is_valid_solution(self, grid: list[list[int]], solution: list[list[int]]) -> bool:
         """
         Validate that a solution is a valid optimal path.
 
@@ -604,7 +603,7 @@ class WeightedMazeGenerator:
     # -----------------------------------------------------------------
 
     @staticmethod
-    def print_grid(grid: List[List[int]], solution: Optional[List[List[int]]] = None) -> str:
+    def print_grid(grid: list[list[int]], solution: list[list[int]] | None = None) -> str:
         """
         Return a human-readable string representation of the maze.
 
@@ -647,10 +646,10 @@ class WeightedMazeGenerator:
 def generate_weighted_maze_dataset(
     num_puzzles: int = 100,
     grid_size: int = 15,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     verbose: bool = True,
     ensure_unique: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate a dataset of weighted maze puzzles with optimal-path solutions.
 
@@ -727,7 +726,7 @@ def generate_weighted_maze_dataset(
     }
 
 
-def save_dataset(dataset: Dict[str, Any], filename_prefix: str, save_format: str = "npz") -> None:
+def save_dataset(dataset: dict[str, Any], filename_prefix: str, save_format: str = "npz") -> None:
     """
     Save the dataset to files.
 
@@ -759,10 +758,10 @@ def save_dataset(dataset: Dict[str, Any], filename_prefix: str, save_format: str
                 f"grid_size={first['grid_size']}\n"
             )
             f.write(
-                f"# Token encoding: 0=WALL, 1=PATH(cost1), 2=START, "
-                f"3=GOAL, 4-9=WEIGHTED(cost=token)\n"
+                "# Token encoding: 0=WALL, 1=PATH(cost1), 2=START, "
+                "3=GOAL, 4-9=WEIGHTED(cost=token)\n"
             )
-            f.write(f"# Solution encoding: 0=not_on_path, 1=on_optimal_path\n\n")
+            f.write("# Solution encoding: 0=not_on_path, 1=on_optimal_path\n\n")
 
         for meta in dataset["metadata"]:
             f.write(
@@ -839,7 +838,7 @@ def main() -> None:
     save_dataset(dataset, args.output, args.format)
 
     # Print summary
-    print(f"\nDataset Summary:")
+    print("\nDataset Summary:")
     print(f"  Puzzles: {len(dataset['problems'])}")
     print(f"  Grid size: {dataset['problems'].shape[1]}x{dataset['problems'].shape[2]}")
     print(f"  Problems shape: {dataset['problems'].shape}")

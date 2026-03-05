@@ -10,15 +10,6 @@ Includes:
 - Weighted maze generation (weighted_maze_generator)
 """
 
-from hrm.data.validator import (
-    count_filled_cells,
-    get_empty_cells,
-    get_valid_candidates,
-    is_valid_placement,
-    is_valid_puzzle,
-    is_valid_solution,
-)
-
 from hrm.data.sudoku_generator import (
     Difficulty,
     SudokuGenerator,
@@ -27,16 +18,23 @@ from hrm.data.sudoku_generator import (
     generate_sudoku_dataset,
     save_dataset,
 )
-
+from hrm.data.validator import (
+    count_filled_cells,
+    get_empty_cells,
+    get_valid_candidates,
+    is_valid_placement,
+    is_valid_puzzle,
+    is_valid_solution,
+)
 from hrm.data.weighted_maze_generator import (
-    WeightedMazeGenerator,
-    generate_weighted_maze_dataset,
-    WALL,
+    GOAL,
+    MAX_WEIGHT,
+    MIN_WEIGHT,
     PATH,
     START,
-    GOAL,
-    MIN_WEIGHT,
-    MAX_WEIGHT,
+    WALL,
+    WeightedMazeGenerator,
+    generate_weighted_maze_dataset,
 )
 
 __all__ = [

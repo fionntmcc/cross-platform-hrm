@@ -18,17 +18,17 @@ Classes:
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-
 # =========================================================================
 # Accuracy helpers
 # =========================================================================
+
 
 def compute_accuracy(
     predictions: torch.Tensor,
@@ -85,6 +85,7 @@ def compute_puzzle_accuracy(
 # Residual / convergence helpers
 # =========================================================================
 
+
 def compute_residuals(
     all_step_logits: list[torch.Tensor],
 ) -> list[float]:
@@ -118,6 +119,7 @@ def compute_residuals(
 # =========================================================================
 # MetricsTracker — per-epoch accumulator
 # =========================================================================
+
 
 @dataclass
 class _BatchStats:
@@ -245,11 +247,7 @@ class MetricsTracker:
             "lm_loss": a.lm_loss / n,
             "token_accuracy": a.correct_tokens / t,
             "puzzle_accuracy": a.puzzles_correct / max(a.puzzles_total, 1),
-            "avg_residual": (
-                a.final_residual / a.residual_count
-                if a.residual_count > 0
-                else None
-            ),
+            "avg_residual": (a.final_residual / a.residual_count if a.residual_count > 0 else None),
             "num_samples": a.num_samples,
             "epoch_time_s": round(elapsed, 2),
         }
@@ -273,6 +271,7 @@ class MetricsTracker:
 # =========================================================================
 # Standalone evaluation helper
 # =========================================================================
+
 
 @torch.no_grad()
 def compute_solve_rate(
@@ -311,10 +310,16 @@ def compute_solve_rate(
         predictions = output["predictions"]
 
         loss = F.cross_entropy(
-            output["logits"][empty_mask].float() if (empty_mask is not None and empty_mask.any())
-            else output["logits"].view(-1, output["logits"].size(-1)).float(),
-            targets[empty_mask] if (empty_mask is not None and empty_mask.any())
-            else targets.view(-1),
+            (
+                output["logits"][empty_mask].float()
+                if (empty_mask is not None and empty_mask.any())
+                else output["logits"].view(-1, output["logits"].size(-1)).float()
+            ),
+            (
+                targets[empty_mask]
+                if (empty_mask is not None and empty_mask.any())
+                else targets.view(-1)
+            ),
         ).item()
 
         tracker.update(

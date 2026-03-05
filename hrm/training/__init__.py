@@ -6,13 +6,13 @@ Modules:
     logger  — Structured JSON logging, CSV export, TensorBoard, training curves.
 """
 
+from hrm.training.logger import TrainingLogger
 from hrm.training.metrics import (
+    MetricsTracker,
     compute_accuracy,
     compute_puzzle_accuracy,
     compute_residuals,
-    MetricsTracker,
 )
-from hrm.training.logger import TrainingLogger
 
 __all__ = [
     "compute_accuracy",

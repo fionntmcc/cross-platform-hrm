@@ -25,19 +25,19 @@ from __future__ import annotations
 
 import csv
 import json
-import os
 from pathlib import Path
 from typing import Any
-
 
 # =========================================================================
 # Soft imports
 # =========================================================================
 
+
 def _try_import_tensorboard():
     """Attempt to import TensorBoard SummaryWriter."""
     try:
         from torch.utils.tensorboard import SummaryWriter
+
         return SummaryWriter
     except ImportError:
         return None
@@ -47,8 +47,10 @@ def _try_import_matplotlib():
     """Attempt to import matplotlib."""
     try:
         import matplotlib
+
         matplotlib.use("Agg")  # non-interactive backend
         import matplotlib.pyplot as plt
+
         return plt
     except ImportError:
         return None
@@ -57,6 +59,7 @@ def _try_import_matplotlib():
 # =========================================================================
 # TrainingLogger
 # =========================================================================
+
 
 class TrainingLogger:
     """Structured logger with JSON, CSV, TensorBoard, and plot support.
@@ -200,8 +203,7 @@ class TrainingLogger:
         ax = axes[1, 0]
         val_puzzle = [r.get("val_puzzle_accuracy") for r in self._history]
         if any(v is not None for v in val_puzzle):
-            ax.plot(epochs, val_puzzle, label="Val Puzzle Acc",
-                    linewidth=1.5, color="green")
+            ax.plot(epochs, val_puzzle, label="Val Puzzle Acc", linewidth=1.5, color="green")
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Accuracy")
         ax.set_title("Puzzle Accuracy (Full Solve)")
@@ -217,13 +219,18 @@ class TrainingLogger:
         has_lr = any(v is not None for v in lr_vals)
 
         if has_residual:
-            ax.plot(epochs, residuals, label="Avg Residual",
-                    linewidth=1.5, color="purple")
+            ax.plot(epochs, residuals, label="Avg Residual", linewidth=1.5, color="purple")
             ax.set_ylabel("Residual (L2)")
         if has_lr:
             ax2 = ax.twinx()
-            ax2.plot(epochs, lr_vals, label="Learning Rate",
-                     linewidth=1.0, color="orange", linestyle="--")
+            ax2.plot(
+                epochs,
+                lr_vals,
+                label="Learning Rate",
+                linewidth=1.0,
+                color="orange",
+                linestyle="--",
+            )
             ax2.set_ylabel("Learning Rate")
             ax2.legend(loc="upper right")
         ax.set_xlabel("Epoch")

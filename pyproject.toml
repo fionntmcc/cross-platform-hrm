@@ -84,6 +84,9 @@ ignore = [
     "S101",   # use of assert (expected in tests)
     "N802",   # function name should be lowercase (test names can vary)
 ]
+"hrm/training/logger.py" = [
+    "SIM115", # open() without context manager — intentional for long-lived file handles
+]
 "hrm/prototype/**/*.py" = [
     "E",      # prototype code — relaxed style enforcement
     "W",

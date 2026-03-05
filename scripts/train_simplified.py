@@ -66,6 +66,8 @@ from hrm.model_simplified import (
     create_simplified_hrm,
     create_small_simplified_hrm,
 )
+from hrm.training.metrics import MetricsTracker
+from hrm.training.logger import TrainingLogger
 
 
 # =============================================================================
@@ -406,10 +408,7 @@ def train_epoch(
     This simulates a larger effective batch size without extra VRAM.
     """
     model.train()
-    total_loss = 0.0
-    total_lm_loss = 0.0
-    total_correct = 0
-    total_tokens = 0
+    tracker = MetricsTracker()
 
     optimizer.zero_grad(set_to_none=True)
 
@@ -460,29 +459,22 @@ def train_epoch(
                 optimizer.step()
             optimizer.zero_grad(set_to_none=True)
 
-        # Statistics — accuracy on empty cells only
-        predictions = output['predictions']
-        if empty_mask is not None and empty_mask.any():
-            total_correct += (predictions[empty_mask] == targets[empty_mask]).sum().item()
-            total_tokens += empty_mask.sum().item()
-        else:
-            total_correct += (predictions == targets).sum().item()
-            total_tokens += targets.numel()
-
-        # Undo the /accum_steps scaling for logging
-        total_loss += (loss.item() * accum_steps) * inputs.size(0)
-        total_lm_loss += (lm_loss.item()) * inputs.size(0)
+        # Track metrics via MetricsTracker
+        tracker.update(
+            loss=loss.item() * accum_steps,  # undo /accum_steps scaling
+            lm_loss=lm_loss.item(),
+            predictions=output['predictions'],
+            targets=targets,
+            batch_size=inputs.size(0),
+            mask=empty_mask,
+            all_step_logits=output.get('all_step_logits'),
+        )
 
         if (batch_idx + 1) % 50 == 0:
             print(f"  Batch {batch_idx + 1}/{len(dataloader)}, "
                   f"Loss: {lm_loss.item():.4f}")
 
-    n = len(dataloader.dataset)
-    return {
-        'loss': total_loss / n,
-        'lm_loss': total_lm_loss / n,
-        'accuracy': total_correct / total_tokens,
-    }
+    return tracker.summarise()
 
 
 @torch.no_grad()
@@ -493,11 +485,7 @@ def evaluate(
 ) -> Dict[str, float]:
     """Evaluate model — always final-step loss only (paper-aligned)."""
     model.eval()
-    total_loss = 0.0
-    total_correct = 0
-    total_tokens = 0
-    puzzle_correct = 0
-    puzzle_total = 0
+    tracker = MetricsTracker()
 
     for batch in dataloader:
         inputs = batch['input'].to(device)
@@ -508,30 +496,22 @@ def evaluate(
             empty_mask = empty_mask.to(device)
 
         output = model(inputs, puzzle_type, targets=targets)
-        predictions = output['predictions']
 
         # FIX 5: Always final-step loss (was routing through multistep)
         lm_loss = compute_masked_loss(
             output['logits'], targets, empty_mask, label_smoothing=0.0,
         )
-        total_loss += lm_loss.item() * inputs.size(0)
 
-        if empty_mask is not None and empty_mask.any():
-            total_correct += (predictions[empty_mask] == targets[empty_mask]).sum().item()
-            total_tokens += empty_mask.sum().item()
-            per_puzzle_correct = ((predictions == targets) | ~empty_mask).all(dim=1)
-            puzzle_correct += per_puzzle_correct.sum().item()
-        else:
-            total_correct += (predictions == targets).sum().item()
-            total_tokens += targets.numel()
-            puzzle_correct += (predictions == targets).all(dim=1).sum().item()
-        puzzle_total += inputs.size(0)
+        tracker.update(
+            loss=lm_loss.item(),
+            predictions=output['predictions'],
+            targets=targets,
+            batch_size=inputs.size(0),
+            mask=empty_mask,
+            all_step_logits=output.get('all_step_logits'),
+        )
 
-    return {
-        'loss': total_loss / len(dataloader.dataset),
-        'token_accuracy': total_correct / total_tokens,
-        'puzzle_accuracy': puzzle_correct / puzzle_total,
-    }
+    return tracker.summarise()
 
 
 def train(
@@ -585,6 +565,14 @@ def train(
         eta_min=lr * 0.1,
     )
 
+    # ---- Structured logger (JSON, CSV, TensorBoard, plots) ----
+    logger = TrainingLogger(
+        log_dir=save_dir,
+        run_name=f"simplified_{puzzle_name}",
+        use_tensorboard=True,
+    )
+
+    # Legacy history dict (kept for backward compatibility)
     history = {
         'train_loss': [],
         'train_accuracy': [],
@@ -610,13 +598,21 @@ def train(
             label_smoothing=label_smoothing,
             accum_steps=accum_steps,
         )
+
+        current_lr = scheduler.get_last_lr()[0]
+        train_metrics['learning_rate'] = current_lr
+        train_metrics['reasoning_steps'] = model.config.num_reasoning_steps
+
         history['train_loss'].append(train_metrics['loss'])
-        history['train_accuracy'].append(train_metrics['accuracy'])
+        history['train_accuracy'].append(train_metrics['token_accuracy'])
 
         print(f"Train Loss: {train_metrics['loss']:.4f}, "
-              f"Train Acc: {train_metrics['accuracy']:.4f}")
+              f"Train Acc: {train_metrics['token_accuracy']:.4f}")
+        if train_metrics.get('avg_residual') is not None:
+            print(f"  Avg Residual: {train_metrics['avg_residual']:.6f}")
 
         # Validate
+        val_metrics = None
         if val_loader:
             val_metrics = evaluate(model, val_loader, device)
             history['val_loss'].append(val_metrics['loss'])
@@ -626,6 +622,8 @@ def train(
             print(f"Val Loss: {val_metrics['loss']:.4f}, "
                   f"Token Acc: {val_metrics['token_accuracy']:.4f}, "
                   f"Puzzle Acc: {val_metrics['puzzle_accuracy']:.4f}")
+            if val_metrics.get('avg_residual') is not None:
+                print(f"  Val Avg Residual: {val_metrics['avg_residual']:.6f}")
 
             # Save best model
             improved = False
@@ -653,6 +651,9 @@ def train(
                     print(f"\nEarly stopping at epoch {epoch} (no improvement for {patience} epochs)")
                     break
 
+        # ---- Log epoch to all sinks ----
+        logger.log_epoch(epoch, train_metrics, val_metrics)
+
         scheduler.step()
 
     # Save final model
@@ -664,10 +665,15 @@ def train(
     }, save_path)
     print(f"\nSaved final model to {save_path}")
 
-    # Save history
+    # Save legacy JSON history (backward compatible)
     history_path = os.path.join(save_dir, f'training_history_simplified_{puzzle_name}.json')
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)
+
+    # Export structured history + training curve plot
+    logger.export_history_json()
+    logger.plot_training_curves()
+    logger.close()
 
     return history
 
@@ -730,6 +736,9 @@ def main():
     # Other arguments
     parser.add_argument('--save-dir', type=str, default='model',
                         help='Directory to save models')
+    parser.add_argument('--run-name', type=str, default=None,
+                        help='Unique run name (used in saved filenames to avoid overwrites). '
+                             'Defaults to "{puzzle}" e.g. "sudoku_9x9"')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed')
     parser.add_argument('--device', type=str, default='auto',
@@ -891,6 +900,9 @@ def main():
     print(f"  Coverage/step    : {coverage:.1%} of dataset")
     print(f"  (Paper reference : 230% coverage with batch 2304 / 1000 samples)")
 
+    # Resolve run name (defaults to puzzle type)
+    run_name = args.run_name or args.puzzle
+
     # Train
     history = train(
         model=model,
@@ -901,7 +913,7 @@ def main():
         weight_decay=args.weight_decay,                     # FIX 2: pass through
         device=device,
         save_dir=args.save_dir,
-        puzzle_name=args.puzzle,
+        puzzle_name=run_name,
         use_amp=use_amp,
         use_compile=args.compile,
         constraint_weight=args.constraint_weight,

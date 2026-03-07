@@ -2,8 +2,9 @@
 Training utilities: metrics tracking and structured logging.
 
 Modules:
-    metrics — Accuracy, solve rate, residual convergence, batch tracking.
-    logger  — Structured JSON logging, CSV export, TensorBoard, training curves.
+    metrics       — Accuracy, solve rate, residual convergence, batch tracking.
+    logger        — Structured JSON logging, CSV export, TensorBoard, training curves.
+    seed_analysis — Multi-seed aggregation, comparison plots, variance reporting.
 """
 
 from hrm.training.logger import TrainingLogger
@@ -13,6 +14,12 @@ from hrm.training.metrics import (
     compute_puzzle_accuracy,
     compute_residuals,
 )
+from hrm.training.seed_analysis import (
+    aggregate_seeds,
+    plot_seed_comparison,
+    print_summary as print_seed_summary,
+    save_summary as save_seed_summary,
+)
 
 __all__ = [
     "compute_accuracy",
@@ -20,4 +27,8 @@ __all__ = [
     "compute_residuals",
     "MetricsTracker",
     "TrainingLogger",
+    "aggregate_seeds",
+    "plot_seed_comparison",
+    "print_seed_summary",
+    "save_seed_summary",
 ]

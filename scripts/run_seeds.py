@@ -54,7 +54,6 @@ from hrm.training.seed_analysis import (
     save_summary,
 )
 
-
 # =========================================================================
 # Helpers
 # =========================================================================
@@ -84,7 +83,6 @@ def _filter_forwarded_args(argv: list[str]) -> list[str]:
 
     Removes: --seed-list, --output-dir, --aggregate-only and their values.
     """
-    skip_next = False
     result: list[str] = []
     skip_flags = {"--seed-list", "--output-dir"}
     bool_flags = {"--aggregate-only"}
@@ -158,7 +156,7 @@ def main() -> None:
     forwarded = _filter_forwarded_args(sys.argv[1:])
 
     print("=" * 65)
-    print(f"  Multi-Seed Experiment Runner")
+    print("  Multi-Seed Experiment Runner")
     print(f"  Seeds:      {seeds}")
     print(f"  Puzzle:     {puzzle}")
     print(f"  Output dir: {output_dir}")

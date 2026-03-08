@@ -12,10 +12,8 @@ Usage:
 """
 
 import argparse
-import math
 import sys
 import time
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -24,9 +22,8 @@ import torch
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from hrm.prototype.models.model_unified import UnifiedHRM, PuzzleType
 from hrm.data.sudoku_generator import generate_sudoku_dataset
-
+from hrm.prototype.models.model_unified import PuzzleType, UnifiedHRM
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 BOLD   = "\033[1m"
@@ -141,7 +138,7 @@ def main():
 
     # ── Header ────────────────────────────────────────────────────────────
     print(f"\n{CYAN}{'═'*62}")
-    print(f"  Hierarchical Reasoning Model (HRM) — Sudoku Solver Demo")
+    print("  Hierarchical Reasoning Model (HRM) — Sudoku Solver Demo")
     print(f"{'═'*62}{RESET}")
 
     # ── Load model ────────────────────────────────────────────────────────
@@ -177,7 +174,7 @@ def main():
     print(f"\n  {BOLD}Puzzle generation{RESET}")
     print(f"  ├─ Count       : {args.count}")
     print(f"  ├─ Difficulty  : {args.difficulty}")
-    print(f"  ├─ Grid size   : 9×9")
+    print("  ├─ Grid size   : 9×9")
     print(f"  └─ Seed        : {gen_seed}")
 
     t_gen = time.perf_counter()

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -15,10 +14,10 @@ from hrm.training.seed_analysis import (
     save_summary,
 )
 
-
 # =========================================================================
 # Fixtures
 # =========================================================================
+
 
 def _make_history(seed: int, num_epochs: int = 10) -> dict[str, list]:
     """Generate a fake training history with small seed-dependent noise."""
@@ -30,16 +29,19 @@ def _make_history(seed: int, num_epochs: int = 10) -> dict[str, list]:
         "train_loss": (base_loss + noise).tolist(),
         "train_accuracy": np.clip(
             np.linspace(0.3, 0.9, num_epochs) + rng.normal(0, 0.005, num_epochs),
-            0, 1,
+            0,
+            1,
         ).tolist(),
         "val_loss": (base_loss + 0.05 + rng.normal(0, 0.01, num_epochs)).tolist(),
         "val_token_accuracy": np.clip(
             np.linspace(0.25, 0.85, num_epochs) + rng.normal(0, 0.005, num_epochs),
-            0, 1,
+            0,
+            1,
         ).tolist(),
         "val_puzzle_accuracy": np.clip(
             np.linspace(0.0, 0.6, num_epochs) + rng.normal(0, 0.005, num_epochs),
-            0, 1,
+            0,
+            1,
         ).tolist(),
     }
 
@@ -64,6 +66,7 @@ def seed_run_dir(tmp_path: Path) -> tuple[Path, list[int]]:
 # =========================================================================
 # Tests
 # =========================================================================
+
 
 class TestAggregateSeeds:
     """Tests for aggregate_seeds()."""

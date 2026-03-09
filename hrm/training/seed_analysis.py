@@ -30,6 +30,7 @@ import numpy as np
 # Aggregation
 # =========================================================================
 
+
 def _load_history(path: Path) -> dict[str, list]:
     """Load a training_history JSON file."""
     with open(path, encoding="utf-8") as f:
@@ -65,9 +66,7 @@ def aggregate_seeds(
     for seed in seeds:
         hist_path = run_dir / f"seed_{seed}" / f"training_history_simplified_{puzzle}.json"
         if not hist_path.exists():
-            raise FileNotFoundError(
-                f"Missing history for seed {seed}: {hist_path}"
-            )
+            raise FileNotFoundError(f"Missing history for seed {seed}: {hist_path}")
         per_seed[seed] = _load_history(hist_path)
 
     # Discover common metrics (lists of floats/ints)
@@ -78,10 +77,7 @@ def aggregate_seeds(
                 all_keys.add(k)
 
     # Align to the shortest run length (in case a seed stopped early)
-    min_len = min(
-        len(v) for hist in per_seed.values() for k, v in hist.items()
-        if k in all_keys
-    )
+    min_len = min(len(v) for hist in per_seed.values() for k, v in hist.items() if k in all_keys)
 
     metrics: dict[str, dict[str, Any]] = {}
     final: dict[str, dict[str, Any]] = {}
@@ -131,6 +127,7 @@ def aggregate_seeds(
 # Reporting
 # =========================================================================
 
+
 def print_summary(summary: dict[str, Any]) -> str:
     """Pretty-print the aggregated summary to stdout. Returns the text."""
     lines: list[str] = []
@@ -158,10 +155,7 @@ def print_summary(summary: dict[str, Any]) -> str:
             f = final[key]
             v = var_pct[key]
             flag = " *** HIGH VARIANCE" if v > 1.5 and "accuracy" in key else ""
-            lines.append(
-                f"  {key:30s}  {f['mean']:.6f} ± {f['std']:.6f}  "
-                f"(var {v:.2f}%){flag}"
-            )
+            lines.append(f"  {key:30s}  {f['mean']:.6f} ± {f['std']:.6f}  " f"(var {v:.2f}%){flag}")
             shown.add(key)
 
     # Remaining metrics
@@ -170,25 +164,19 @@ def print_summary(summary: dict[str, Any]) -> str:
             continue
         f = final[key]
         v = var_pct[key]
-        lines.append(
-            f"  {key:30s}  {f['mean']:.6f} ± {f['std']:.6f}  (var {v:.2f}%)"
-        )
+        lines.append(f"  {key:30s}  {f['mean']:.6f} ± {f['std']:.6f}  (var {v:.2f}%)")
 
     lines.append("=" * 65)
 
     # Variance assessment
-    acc_vars = {
-        k: v for k, v in var_pct.items() if "accuracy" in k and k in final
-    }
+    acc_vars = {k: v for k, v in var_pct.items() if "accuracy" in k and k in final}
     if acc_vars:
         max_var_key = max(acc_vars, key=acc_vars.get)  # type: ignore[arg-type]
         max_var = acc_vars[max_var_key]
         if max_var <= 1.5:
             lines.append(f"  PASS: Max accuracy variance {max_var:.2f}% <= 1.5% target")
         else:
-            lines.append(
-                f"  WARN: {max_var_key} variance {max_var:.2f}% > 1.5% target"
-            )
+            lines.append(f"  WARN: {max_var_key} variance {max_var:.2f}% > 1.5% target")
     lines.append("")
 
     text = "\n".join(lines)
@@ -199,6 +187,7 @@ def print_summary(summary: dict[str, Any]) -> str:
 # =========================================================================
 # Plotting
 # =========================================================================
+
 
 def plot_seed_comparison(
     summary: dict[str, Any],
@@ -220,6 +209,7 @@ def plot_seed_comparison(
     """
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
@@ -245,8 +235,13 @@ def plot_seed_comparison(
     for i, seed in enumerate(seeds):
         if "val_loss" in metrics:
             vals = metrics["val_loss"]["per_seed"][seed]
-            ax.plot(epochs[:len(vals)], vals, label=f"Seed {seed}",
-                    color=colours[i % len(colours)], alpha=0.7)
+            ax.plot(
+                epochs[: len(vals)],
+                vals,
+                label=f"Seed {seed}",
+                color=colours[i % len(colours)],
+                alpha=0.7,
+            )
     if "val_loss" in metrics:
         mean = metrics["val_loss"]["mean"]
         std = metrics["val_loss"]["std"]
@@ -255,7 +250,8 @@ def plot_seed_comparison(
             epochs,
             [m - s for m, s in zip(mean, std, strict=True)],
             [m + s for m, s in zip(mean, std, strict=True)],
-            alpha=0.15, color="black",
+            alpha=0.15,
+            color="black",
         )
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss")
@@ -268,8 +264,13 @@ def plot_seed_comparison(
     for i, seed in enumerate(seeds):
         if "val_token_accuracy" in metrics:
             vals = metrics["val_token_accuracy"]["per_seed"][seed]
-            ax.plot(epochs[:len(vals)], vals, label=f"Seed {seed}",
-                    color=colours[i % len(colours)], alpha=0.7)
+            ax.plot(
+                epochs[: len(vals)],
+                vals,
+                label=f"Seed {seed}",
+                color=colours[i % len(colours)],
+                alpha=0.7,
+            )
     if "val_token_accuracy" in metrics:
         mean = metrics["val_token_accuracy"]["mean"]
         std = metrics["val_token_accuracy"]["std"]
@@ -278,7 +279,8 @@ def plot_seed_comparison(
             epochs,
             [m - s for m, s in zip(mean, std, strict=True)],
             [m + s for m, s in zip(mean, std, strict=True)],
-            alpha=0.15, color="black",
+            alpha=0.15,
+            color="black",
         )
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Accuracy")
@@ -292,8 +294,13 @@ def plot_seed_comparison(
     for i, seed in enumerate(seeds):
         if "val_puzzle_accuracy" in metrics:
             vals = metrics["val_puzzle_accuracy"]["per_seed"][seed]
-            ax.plot(epochs[:len(vals)], vals, label=f"Seed {seed}",
-                    color=colours[i % len(colours)], alpha=0.7)
+            ax.plot(
+                epochs[: len(vals)],
+                vals,
+                label=f"Seed {seed}",
+                color=colours[i % len(colours)],
+                alpha=0.7,
+            )
     if "val_puzzle_accuracy" in metrics:
         mean = metrics["val_puzzle_accuracy"]["mean"]
         std = metrics["val_puzzle_accuracy"]["std"]
@@ -302,7 +309,8 @@ def plot_seed_comparison(
             epochs,
             [m - s for m, s in zip(mean, std, strict=True)],
             [m + s for m, s in zip(mean, std, strict=True)],
-            alpha=0.15, color="black",
+            alpha=0.15,
+            color="black",
         )
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Accuracy")
@@ -319,8 +327,15 @@ def plot_seed_comparison(
         x = np.arange(len(bar_keys))
         means = [summary["final"][k]["mean"] for k in bar_keys]
         stds = [summary["final"][k]["std"] for k in bar_keys]
-        ax.bar(x, means, yerr=stds, capsize=6, color=colours[:len(bar_keys)],
-               alpha=0.8, edgecolor="black")
+        ax.bar(
+            x,
+            means,
+            yerr=stds,
+            capsize=6,
+            color=colours[: len(bar_keys)],
+            alpha=0.8,
+            edgecolor="black",
+        )
         ax.set_xticks(x)
         ax.set_xticklabels([k.replace("_", "\n") for k in bar_keys], fontsize=8)
         ax.set_ylabel("Accuracy")
@@ -331,11 +346,16 @@ def plot_seed_comparison(
         # Annotate bars with variance %
         for i, k in enumerate(bar_keys):
             var = summary["variance_pct"][k]
-            ax.text(i, means[i] + stds[i] + 0.02, f"{var:.2f}%",
-                    ha="center", fontsize=9, color="red" if var > 1.5 else "green")
+            ax.text(
+                i,
+                means[i] + stds[i] + 0.02,
+                f"{var:.2f}%",
+                ha="center",
+                fontsize=9,
+                color="red" if var > 1.5 else "green",
+            )
     else:
-        ax.text(0.5, 0.5, "No accuracy metrics", ha="center", va="center",
-                transform=ax.transAxes)
+        ax.text(0.5, 0.5, "No accuracy metrics", ha="center", va="center", transform=ax.transAxes)
 
     plt.tight_layout()
     out_dir = Path(save_dir) if save_dir else Path(".")
@@ -350,6 +370,7 @@ def plot_seed_comparison(
 # =========================================================================
 # Save summary JSON
 # =========================================================================
+
 
 def save_summary(
     summary: dict[str, Any],
@@ -390,18 +411,22 @@ def save_summary(
 # CLI entry point
 # =========================================================================
 
+
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Aggregate multi-seed training results"
+    parser = argparse.ArgumentParser(description="Aggregate multi-seed training results")
+    parser.add_argument("run_dir", type=str, help="Directory containing seed_* subdirectories")
+    parser.add_argument(
+        "--seeds",
+        type=int,
+        nargs="+",
+        default=[123, 456, 789],
+        help="Seeds to aggregate (default: 123 456 789)",
     )
-    parser.add_argument("run_dir", type=str,
-                        help="Directory containing seed_* subdirectories")
-    parser.add_argument("--seeds", type=int, nargs="+", default=[123, 456, 789],
-                        help="Seeds to aggregate (default: 123 456 789)")
-    parser.add_argument("--puzzle", type=str, default="sudoku_9x9",
-                        help="Puzzle name used in history filenames")
+    parser.add_argument(
+        "--puzzle", type=str, default="sudoku_9x9", help="Puzzle name used in history filenames"
+    )
     args = parser.parse_args()
 
     summary = aggregate_seeds(args.run_dir, args.seeds, args.puzzle)

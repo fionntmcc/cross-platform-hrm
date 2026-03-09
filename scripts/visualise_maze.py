@@ -40,7 +40,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -59,10 +58,10 @@ def _import_mpl(interactive: bool = False):
     import matplotlib
     if not interactive:
         matplotlib.use("Agg")  # non-interactive backend (for saving only)
-    import matplotlib.pyplot as plt
     import matplotlib.colors as mcolors
     import matplotlib.patches as mpatches
-    from matplotlib.colors import ListedColormap, BoundaryNorm
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import BoundaryNorm, ListedColormap
     _mpl_cache = plt, mcolors, mpatches, ListedColormap, BoundaryNorm
     return _mpl_cache
 
@@ -308,7 +307,7 @@ def render_truth_only(ax, maze: np.ndarray, truth: np.ndarray,
 
 def figure_comparison(maze: np.ndarray, pred: np.ndarray,
                       truth: np.ndarray, idx: int = 0,
-                      metrics: dict = None) -> "Figure":
+                      metrics: dict = None) -> Figure:
     """
     Create a side-by-side figure: prediction vs ground truth.
 
@@ -349,7 +348,7 @@ def figure_comparison(maze: np.ndarray, pred: np.ndarray,
 
 def figure_reasoning_steps(maze: np.ndarray, step_preds: list,
                            truth: np.ndarray = None,
-                           idx: int = 0) -> "Figure":
+                           idx: int = 0) -> Figure:
     """
     Create a tiled figure showing predicted path at each reasoning step.
     """
@@ -405,7 +404,8 @@ def figure_reasoning_steps(maze: np.ndarray, step_preds: list,
 
 def _load_model(model_path: str, device):
     import torch
-    from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType
+
+    from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     config = checkpoint.get("config", SimplifiedHRMConfig())
     model = SimplifiedHRM(config)
@@ -416,6 +416,7 @@ def _load_model(model_path: str, device):
 
 def _predict(model, maze_2d: np.ndarray, device, return_steps=False):
     import torch
+
     from hrm.model_simplified import PuzzleType
     flat = torch.from_numpy(maze_2d.flatten()).long().unsqueeze(0).to(device)
     with torch.no_grad():

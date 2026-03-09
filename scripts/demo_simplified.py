@@ -35,8 +35,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType
-
+from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig
 
 # ── ANSI colours ────────────────────────────────────────────────────────────
 RESET  = "\033[0m"

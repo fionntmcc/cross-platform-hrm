@@ -24,8 +24,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig, PuzzleType
-
+from hrm.model_simplified import PuzzleType, SimplifiedHRM, SimplifiedHRMConfig
 
 # ── ANSI helpers ──────────────────────────────────────────────────────────────
 
@@ -236,7 +235,7 @@ def main():
         data_path = Path(data_path)
 
     if data_path is None or not Path(data_path).exists():
-        print(f"Error: No data file found. Please provide a --data path to a .npz file.")
+        print("Error: No data file found. Please provide a --data path to a .npz file.")
         sys.exit(1)
     else:
         npz = np.load(str(data_path))
@@ -315,11 +314,11 @@ def main():
     show_preds = all_preds[show_idx]
 
     print(f"\n{'='*50}")
-    print(f"  EXAMPLE SOLUTIONS")
+    print("  EXAMPLE SOLUTIONS")
     if is_maze:
-        print(f"  Legend: \033[92mgreen\033[0m=correct path  \033[91mred\033[0m=wrong path  \033[96mcyan\033[0m=missed")
+        print("  Legend: \033[92mgreen\033[0m=correct path  \033[91mred\033[0m=wrong path  \033[96mcyan\033[0m=missed")
     else:
-        print(f"  Legend: \033[1mbold\033[0m=given  \033[92mgreen\033[0m=correct  \033[91mred\033[0m=wrong")
+        print("  Legend: \033[1mbold\033[0m=given  \033[92mgreen\033[0m=correct  \033[91mred\033[0m=wrong")
     print(f"{'='*50}")
 
     for i in range(min(n_show, len(show_puzzles))):

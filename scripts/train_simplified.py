@@ -46,7 +46,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -59,16 +58,13 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from hrm.model_simplified import (
+    PuzzleType,
     SimplifiedHRM,
     SimplifiedHRMConfig,
-    PuzzleType,
-    PUZZLE_DEFAULTS,
-    create_simplified_hrm,
     create_small_simplified_hrm,
 )
-from hrm.training.metrics import MetricsTracker
 from hrm.training.logger import TrainingLogger
-
+from hrm.training.metrics import MetricsTracker
 
 # =============================================================================
 # Dataset Classes
@@ -103,7 +99,7 @@ class SudokuDataset(Dataset):
     def __len__(self) -> int:
         return len(self.puzzles)
 
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         return {
             'input': self.puzzles[idx],
             'target': self.solutions[idx],
@@ -131,7 +127,7 @@ class MazeDataset(Dataset):
     def __len__(self) -> int:
         return len(self.mazes)
 
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         return {
             'input': self.mazes[idx],
             'target': self.solutions[idx],
@@ -139,7 +135,7 @@ class MazeDataset(Dataset):
         }
 
 
-def collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
+def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     """Custom collate that handles mixed puzzle types."""
     inputs = torch.stack([item['input'] for item in batch])
     targets = torch.stack([item['target'] for item in batch])
@@ -164,7 +160,7 @@ def collate_fn(batch: List[Dict]) -> Dict[str, torch.Tensor]:
 def load_sudoku_data(
     data_path: str,
     puzzle_type: PuzzleType,
-    max_samples: Optional[int] = None,
+    max_samples: int | None = None,
 ) -> SudokuDataset:
     """Load Sudoku data from .npz file."""
     print(f"Loading Sudoku data from {data_path}...")
@@ -187,12 +183,12 @@ def generate_sudoku_data(
     num_samples: int,
     difficulty: str = 'medium',
     output_path: str = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Generate Sudoku training data."""
     print(f"Generating {num_samples} {grid_size}x{grid_size} Sudoku puzzles...")
 
     if grid_size == 9:
-        from hrm.data.sudoku_generator import SudokuGenerator, Difficulty
+        from hrm.data.sudoku_generator import Difficulty, SudokuGenerator
         generator = SudokuGenerator(grid_size=9)
 
         diff_map = {
@@ -259,7 +255,7 @@ def generate_sudoku_data(
 
 def load_maze_data(
     data_path: str,
-    max_samples: Optional[int] = None,
+    max_samples: int | None = None,
 ) -> MazeDataset:
     """Load weighted maze data from .npz file.
 
@@ -286,9 +282,9 @@ def load_maze_data(
 def generate_maze_data(
     grid_size: int = 15,
     num_samples: int = 100,
-    seed: Optional[int] = None,
-    output_path: Optional[str] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    seed: int | None = None,
+    output_path: str | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     """Generate weighted maze training data.
 
     Uses :mod:`generators.weighted_maze_generator` to create mazes with
@@ -325,7 +321,7 @@ def generate_maze_data(
 def compute_masked_loss(
     logits: torch.Tensor,
     targets: torch.Tensor,
-    empty_mask: Optional[torch.Tensor] = None,
+    empty_mask: torch.Tensor | None = None,
     label_smoothing: float = 0.0,                      # FIX 1: was 0.1
 ) -> torch.Tensor:
     """
@@ -395,12 +391,12 @@ def train_epoch(
     optimizer: optim.Optimizer,
     device: torch.device,
     epoch: int,
-    scaler: Optional[torch.amp.GradScaler] = None,
+    scaler: torch.amp.GradScaler | None = None,
     use_amp: bool = False,
     constraint_weight: float = 0.0,
     label_smoothing: float = 0.0,
     accum_steps: int = 1,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Train for one epoch. Loss = final-step CE only (paper-aligned).
 
     Supports gradient accumulation: when accum_steps > 1, gradients are
@@ -482,7 +478,7 @@ def evaluate(
     model: SimplifiedHRM,
     dataloader: DataLoader,
     device: torch.device,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Evaluate model — always final-step loss only (paper-aligned)."""
     model.eval()
     tracker = MetricsTracker()
@@ -517,7 +513,7 @@ def evaluate(
 def train(
     model: SimplifiedHRM,
     train_loader: DataLoader,
-    val_loader: Optional[DataLoader],
+    val_loader: DataLoader | None,
     epochs: int,
     lr: float,
     weight_decay: float,                                # FIX 2: was hardcoded
@@ -529,7 +525,7 @@ def train(
     constraint_weight: float = 0.0,
     label_smoothing: float = 0.0,
     accum_steps: int = 1,
-) -> Dict:
+) -> dict:
     """Main training loop with optional mixed-precision and torch.compile."""
     print(f"\nTraining on {device}")
     if device.type == 'cuda':
@@ -876,7 +872,7 @@ def main():
         )
         model = SimplifiedHRM(config)
 
-    print(f"\nModel Config (Simplified HRM — L-Module Only):")
+    print("\nModel Config (Simplified HRM — L-Module Only):")
     print(f"  Hidden size: {model.config.hidden_size}")
     print(f"  Num heads: {model.config.num_heads}")
     print(f"  Num layers (L-only): {model.config.num_layers}")
@@ -893,12 +889,12 @@ def main():
     effective_batch = args.batch_size * args.accum_steps
     n_total = len(dataset)
     coverage = min(effective_batch / n_total, 1.0)
-    print(f"\nBatch config:")
+    print("\nBatch config:")
     print(f"  Physical batch   : {args.batch_size}")
     print(f"  Accum steps      : {args.accum_steps}x")
     print(f"  Effective batch  : {effective_batch}")
     print(f"  Coverage/step    : {coverage:.1%} of dataset")
-    print(f"  (Paper reference : 230% coverage with batch 2304 / 1000 samples)")
+    print("  (Paper reference : 230% coverage with batch 2304 / 1000 samples)")
 
     # Resolve run name (defaults to puzzle type)
     run_name = args.run_name or args.puzzle

@@ -228,9 +228,9 @@ def main() -> None:
 
         print(f"Pushing tag {args.tag} to origin ...")
         run_git("push", "origin", args.tag, cwd=root)
-        print(f"  Pushed. GitHub Actions will create a draft release shortly.")
+        print("  Pushed. GitHub Actions will create a draft release shortly.")
     else:
-        print(f"Skipping tag creation (--skip-tag).")
+        print("Skipping tag creation (--skip-tag).")
 
     if args.dry_run:
         print("\nDry run complete — tag pushed. Upload models when ready:")
@@ -267,7 +267,7 @@ def main() -> None:
     print("\nPublishing release ...")
     updated = _patch(f"{API_BASE}/releases/{release_id}", token, {"draft": False})
     print(f"Published: {updated['html_url']}")
-    print(f"\nDone! Download with:")
+    print("\nDone! Download with:")
     print(f"  python scripts/download_model.py --tag {args.tag}")
 
 

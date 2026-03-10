@@ -8,6 +8,7 @@ Usage:
     python scripts/run_simplified.py --model model/simplified_hrm_sudoku_4x4_final.pt --puzzle sudoku_4x4
     python scripts/run_simplified.py --model model/simplified_hrm_sudoku_9x9_best.pt --puzzle sudoku_9x9
     python scripts/run_simplified.py --model model/simplified_hrm_maze_best.pt --puzzle maze --data data/maze_15x15_train.npz
+    python scripts/run_simplified.py --model model/simplified_hrm_maze_best.pt --puzzle maze --data data/samples/sample_maze_15x15.json
 """
 
 import argparse
@@ -235,14 +236,21 @@ def main():
         data_path = Path(data_path)
 
     if data_path is None or not Path(data_path).exists():
-        print("Error: No data file found. Please provide a --data path to a .npz file.")
+        print("Error: No data file found. Please provide a --data path to a .npz/.json/.csv file.")
         sys.exit(1)
     else:
-        npz = np.load(str(data_path))
-        # Maze datasets use 'problems'; sudoku uses 'puzzles'
-        key = 'problems' if 'problems' in npz else 'puzzles'
-        puzzles = npz[key]
-        solutions = npz['solutions']
+        ext = Path(data_path).suffix.lower()
+        if ext in (".json", ".csv"):
+            from hrm.data.io import load_dataset
+
+            ds = load_dataset(data_path)
+            puzzles = ds["problems"]
+            solutions = ds["solutions"]
+        else:
+            npz = np.load(str(data_path))
+            key = "problems" if "problems" in npz else "puzzles"
+            puzzles = npz[key]
+            solutions = npz["solutions"]
         if is_maze:
             grid_size = puzzles.shape[1]
         print(f"Loaded {len(puzzles)} puzzles from {data_path}")

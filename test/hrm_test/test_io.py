@@ -9,7 +9,6 @@ import pytest
 
 from hrm.data.io import load_dataset, save_dataset
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -20,9 +19,7 @@ def _make_sudoku_dataset(n: int = 5, grid_size: int = 4) -> dict:
     rng = np.random.default_rng(0)
     return {
         "problems": rng.integers(0, grid_size + 1, size=(n, grid_size, grid_size), dtype=np.int8),
-        "solutions": rng.integers(
-            1, grid_size + 1, size=(n, grid_size, grid_size), dtype=np.int8
-        ),
+        "solutions": rng.integers(1, grid_size + 1, size=(n, grid_size, grid_size), dtype=np.int8),
         "metadata": [
             {
                 "puzzle_id": i,

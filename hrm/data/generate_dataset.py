@@ -38,9 +38,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Difficulty level (default: medium)",
     )
     sp_sudoku.add_argument("--seed", type=int, default=None, help="Random seed")
-    sp_sudoku.add_argument(
-        "-o", "--output", required=True, help="Output file path (.json or .csv)"
-    )
+    sp_sudoku.add_argument("-o", "--output", required=True, help="Output file path (.json or .csv)")
     sp_sudoku.add_argument(
         "--format",
         default=None,

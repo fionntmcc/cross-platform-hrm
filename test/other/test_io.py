@@ -1,7 +1,6 @@
 """Tests for hrm.data.io — JSON/CSV dataset save and load."""
 
 import json
-import tempfile
 from pathlib import Path
 
 import numpy as np

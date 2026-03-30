@@ -8,6 +8,7 @@ Includes:
 - Sudoku validation (validator)
 - Sudoku puzzle generation (sudoku_generator)
 - Weighted maze generation (weighted_maze_generator)
+- Dataset I/O in JSON/CSV formats (io)
 """
 
 from hrm.data.sudoku_generator import (
@@ -25,6 +26,10 @@ from hrm.data.validator import (
     is_valid_placement,
     is_valid_puzzle,
     is_valid_solution,
+)
+from hrm.data.io import (
+    load_dataset,
+    save_dataset as save_dataset_io,
 )
 from hrm.data.weighted_maze_generator import (
     GOAL,
@@ -52,6 +57,9 @@ __all__ = [
     "generate_full_grid",
     "generate_sudoku_dataset",
     "save_dataset",
+    # Dataset I/O (JSON/CSV)
+    "save_dataset_io",
+    "load_dataset",
     # Maze generator
     "WeightedMazeGenerator",
     "generate_weighted_maze_dataset",

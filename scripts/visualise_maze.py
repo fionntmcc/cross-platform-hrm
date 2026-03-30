@@ -492,9 +492,16 @@ def main():
             if len(mazes) >= args.num:
                 break
     elif args.data:
-        data = np.load(args.data)
-        key = "problems" if "problems" in data else "puzzles"
-        problems, solutions = data[key], data["solutions"]
+        ext = Path(args.data).suffix.lower()
+        if ext in (".json", ".csv"):
+            from hrm.data.io import load_dataset
+
+            ds = load_dataset(args.data)
+            problems, solutions = ds["problems"], ds["solutions"]
+        else:
+            data = np.load(args.data)
+            key = "problems" if "problems" in data else "puzzles"
+            problems, solutions = data[key], data["solutions"]
         print(f"Loaded {len(problems)} mazes from {args.data}")
 
         if args.index is not None:

@@ -33,6 +33,12 @@ Usage:
         --model model/simplified_hrm_maze_best.pt \
         --data data/maze_15x15_train.npz \
         --show
+
+    # Use exported ONNX model for visualisation
+    python scripts/visualise_maze.py \
+        --model model/simplified_hrm_maze_11x11_s16.onnx \
+        --data data/maze_11x11_train.npz \
+        --num 5 --save-dir figures/maze_onnx
 """
 
 from __future__ import annotations
@@ -40,6 +46,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -402,7 +409,7 @@ def figure_reasoning_steps(maze: np.ndarray, step_preds: list,
 #  Model inference helpers
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _load_model(model_path: str, device):
+def _load_pt_model(model_path: str, device):
     import torch
 
     from hrm.model_simplified import SimplifiedHRM, SimplifiedHRMConfig
@@ -414,7 +421,26 @@ def _load_model(model_path: str, device):
     return model, config
 
 
-def _predict(model, maze_2d: np.ndarray, device, return_steps=False):
+def _load_onnx_model(model_path: str):
+    try:
+        import onnxruntime as ort
+    except ImportError as exc:
+        raise RuntimeError(
+            "onnxruntime is required for ONNX visualisation. "
+            "Install with: pip install onnxruntime"
+        ) from exc
+
+    session = ort.InferenceSession(
+        model_path,
+        providers=["CPUExecutionProvider"],
+    )
+    inp = session.get_inputs()[0]
+    out = session.get_outputs()[0]
+    config = SimpleNamespace(num_reasoning_steps="N/A (ONNX)")
+    return session, config, inp.name, out.name
+
+
+def _predict_pt(model, maze_2d: np.ndarray, device, return_steps=False):
     import torch
 
     from hrm.model_simplified import PuzzleType
@@ -428,6 +454,21 @@ def _predict(model, maze_2d: np.ndarray, device, return_steps=False):
     return pred, steps
 
 
+def _predict_onnx(session, input_name: str, maze_2d: np.ndarray):
+    flat = maze_2d.flatten().astype(np.int64).reshape(1, -1)
+    pred = session.run(None, {input_name: flat})[0][0].reshape(maze_2d.shape)
+    return pred, None
+
+
+def _resolve_backend(model_path: str, backend_flag: str) -> str:
+    if backend_flag != "auto":
+        return backend_flag
+    ext = Path(model_path).suffix.lower()
+    if ext == ".onnx":
+        return "onnx"
+    return "pt"
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  CLI
 # ═══════════════════════════════════════════════════════════════════════════
@@ -438,7 +479,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--model", required=True,
-                        help="Path to trained maze checkpoint (.pt)")
+                        help="Path to trained maze checkpoint (.pt) or exported model (.onnx)")
+    parser.add_argument("--backend", choices=["auto", "pt", "onnx"],
+                        default="auto",
+                        help="Inference backend (default: auto by model extension)")
     parser.add_argument("--data", default=None,
                         help="Path to maze .npz dataset")
     parser.add_argument("--generate", action="store_true",
@@ -460,21 +504,33 @@ def main():
     parser.add_argument("--device", type=str, default="auto")
 
     args = parser.parse_args()
+    backend = _resolve_backend(args.model, args.backend)
 
     plt, _, _, _, _ = _import_mpl()
 
-    # ── Device ──
-    import torch
-    if args.device == "auto":
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device(args.device)
-
     # ── Load model ──
-    print(f"Loading model from {args.model}...")
-    model, config = _load_model(args.model, device)
-    print(f"  Parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
-    print(f"  Reasoning steps: {config.num_reasoning_steps}")
+    print(f"Loading model from {args.model} [{backend}]...")
+    device = None
+    if backend == "pt":
+        import torch
+
+        if args.device == "auto":
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            device = torch.device(args.device)
+
+        model, config = _load_pt_model(args.model, device)
+        print(f"  Parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
+        print(f"  Reasoning steps: {config.num_reasoning_steps}")
+    else:
+        model, config, input_name, output_name = _load_onnx_model(args.model)
+        print(f"  Provider: {model.get_providers()[0]}")
+        print(f"  Input: {input_name} {model.get_inputs()[0].shape}")
+        print(f"  Output: {output_name} {model.get_outputs()[0].shape}")
+
+    if args.steps and backend == "onnx":
+        print("Warning: --steps is only available for PyTorch checkpoints (.pt).")
+        print("         Continuing with comparison figures only.")
 
     # ── Load / generate mazes ──
     mazes = []  # list of (maze_2d, solution_2d_or_None)
@@ -530,8 +586,12 @@ def main():
     # ── Render ──
     for i, (maze_2d, truth_2d) in enumerate(mazes):
         idx = args.index if args.index is not None else i
-        pred_2d, step_preds = _predict(model, maze_2d, device,
-                                        return_steps=args.steps)
+        if backend == "pt":
+            pred_2d, step_preds = _predict_pt(
+                model, maze_2d, device, return_steps=args.steps
+            )
+        else:
+            pred_2d, step_preds = _predict_onnx(model, input_name, maze_2d)
 
         # Metrics
         metrics = {}
@@ -572,7 +632,10 @@ def main():
         accs = []
         for maze_2d, truth_2d in mazes:
             if truth_2d is not None:
-                pred, _ = _predict(model, maze_2d, device)
+                if backend == "pt":
+                    pred, _ = _predict_pt(model, maze_2d, device)
+                else:
+                    pred, _ = _predict_onnx(model, input_name, maze_2d)
                 accs.append((pred == truth_2d).mean())
         if accs:
             print(f"\nOverall cell accuracy: {np.mean(accs):.1%} "

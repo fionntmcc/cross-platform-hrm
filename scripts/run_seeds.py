@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Automated multi-seed training runner.
 
@@ -54,9 +60,7 @@ from hrm.training.seed_analysis import (
     save_summary,
 )
 
-# =========================================================================
 # Helpers
-# =========================================================================
 
 def _build_train_command(
     seed: int,
@@ -118,12 +122,10 @@ def _filter_forwarded_args(argv: list[str]) -> list[str]:
     return result
 
 
-# =========================================================================
 # Main
-# =========================================================================
 
 def main() -> None:
-    # ---- Parse our own arguments first ----
+    # Parse our own arguments first
     parser = argparse.ArgumentParser(
         description="Run multi-seed training experiments (dev/production only)",
         add_help=False,  # Don't conflict with train_simplified --help
@@ -163,7 +165,7 @@ def main() -> None:
     print(f"  Mode:       {'aggregate-only' if args.aggregate_only else 'train + aggregate'}")
     print("=" * 65)
 
-    # ---- Training phase ----
+    # Training phase
     if not args.aggregate_only:
         total_start = time.time()
 
@@ -194,7 +196,7 @@ def main() -> None:
         total_elapsed = time.time() - total_start
         print(f"\n  All {len(seeds)} seeds trained in {total_elapsed:.1f}s")
 
-    # ---- Aggregation phase ----
+    # Aggregation phase
     print(f"\n{'='*65}")
     print(f"  Aggregating results across {len(seeds)} seeds...")
     print(f"{'='*65}\n")

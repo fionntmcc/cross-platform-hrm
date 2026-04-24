@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 HRM_4x4_Simple: L-Module Only Variant of the Hierarchical Reasoning Model
 
@@ -59,6 +65,7 @@ class SimpleExecutionTrace:
         x_in: Input embedding used during execution (if tracked).
         final_h_L: Final low-level hidden state.
     """
+
     num_steps: int
     max_steps: int
     converged: bool
@@ -134,7 +141,7 @@ class HRM_4x4_Simple(nn.Module):
     """
 
     # Class constants for 4x4 Sudoku
-    VOCAB_SIZE = 5   # 0=empty, 1-4=digits
+    VOCAB_SIZE = 5  # 0=empty, 1-4=digits
     GRID_SIZE = 4
     NUM_CELLS = 16
     NUM_DIGITS = 4
@@ -171,13 +178,9 @@ class HRM_4x4_Simple(nn.Module):
         if n_iterations <= 0:
             raise ValueError(f"n_iterations must be positive, got {n_iterations}")
         if convergence_threshold <= 0:
-            raise ValueError(
-                f"convergence_threshold must be positive, got {convergence_threshold}"
-            )
+            raise ValueError(f"convergence_threshold must be positive, got {convergence_threshold}")
         if n_worker_layers <= 0:
-            raise ValueError(
-                f"n_worker_layers must be positive, got {n_worker_layers}"
-            )
+            raise ValueError(f"n_worker_layers must be positive, got {n_worker_layers}")
         if not 0 <= dropout < 1:
             raise ValueError(f"dropout must be in [0, 1), got {dropout}")
 
@@ -190,9 +193,7 @@ class HRM_4x4_Simple(nn.Module):
         self.dropout = dropout
         self.track_history = track_history
 
-        # =====================================================================
         # Component 1: Input Network (embedding + projection)
-        # =====================================================================
         self.input_network = InputNetwork(
             vocab_size=self.VOCAB_SIZE,
             grid_size=self.GRID_SIZE,
@@ -202,25 +203,23 @@ class HRM_4x4_Simple(nn.Module):
             use_positional=True,
         )
 
-        # =====================================================================
         # Component 2: Worker Layers (expanded L-module, no Planner)
-        # =====================================================================
         # Use x_in as context instead of h_H. The Worker concatenates
         # [h_L_prev, h_H, x_in] — we pass x_in for both h_H and x_in slots,
         # so we keep use_input_proj=True and provide x_in as the h_H argument.
-        self.worker_layers = nn.ModuleList([
-            WorkerModule(
-                hidden_dim=hidden_dim,
-                mlp_ratio=4,
-                dropout=dropout,
-                use_input_proj=True,
-            )
-            for _ in range(n_worker_layers)
-        ])
+        self.worker_layers = nn.ModuleList(
+            [
+                WorkerModule(
+                    hidden_dim=hidden_dim,
+                    mlp_ratio=4,
+                    dropout=dropout,
+                    use_input_proj=True,
+                )
+                for _ in range(n_worker_layers)
+            ]
+        )
 
-        # =====================================================================
         # Component 3: Output Network (action decoder f_O)
-        # =====================================================================
         self.output_network = OutputNetwork(
             hidden_dim=hidden_dim,
             grid_size=self.GRID_SIZE,
@@ -229,9 +228,7 @@ class HRM_4x4_Simple(nn.Module):
             dropout=dropout,
         )
 
-        # =====================================================================
         # Learned Initial State (h_L only — no h_H needed)
-        # =====================================================================
         self.h_L_init = nn.Parameter(torch.zeros(1, hidden_dim))
 
         # Initialise learned state
@@ -293,26 +290,18 @@ class HRM_4x4_Simple(nn.Module):
         """
         # Validate input shape
         if x.dim() != 3 or x.shape[1:] != (self.GRID_SIZE, self.GRID_SIZE):
-            raise ValueError(
-                f"Expected input shape (batch, 4, 4), got {x.shape}"
-            )
+            raise ValueError(f"Expected input shape (batch, 4, 4), got {x.shape}")
 
         batch_size = x.shape[0]
         device = x.device
 
-        # =================================================================
         # Step 1: Embed input puzzle
-        # =================================================================
         x_in = self.input_network(x)  # (batch, hidden_dim)
 
-        # =================================================================
         # Step 2: Expand learned initial state to batch size
-        # =================================================================
         h_L = self.h_L_init.expand(batch_size, -1).to(device)  # (batch, hidden_dim)
 
-        # =================================================================
         # Step 3: Flat iteration loop (no Planner, no outer/inner split)
-        # =================================================================
         residual_history: List[float] = []
         converged = False
         num_steps = 0
@@ -340,15 +329,11 @@ class HRM_4x4_Simple(nn.Module):
                 converged = True
                 break
 
-        # =================================================================
         # Step 4: Decode to action predictions from final h_L
-        # =================================================================
         # In the simplified model, h_L is the sole hidden state — no h_H.
         cell_logits, digit_logits = self.output_network(h_L)
 
-        # =================================================================
         # Step 5: Build execution trace
-        # =================================================================
         trace = SimpleExecutionTrace(
             num_steps=num_steps,
             max_steps=self.n_iterations,
@@ -360,10 +345,10 @@ class HRM_4x4_Simple(nn.Module):
         )
 
         return {
-            'cell_logits': cell_logits,
-            'digit_logits': digit_logits,
-            'trace': trace,
-            'h_L_final': h_L,
+            "cell_logits": cell_logits,
+            "digit_logits": digit_logits,
+            "trace": trace,
+            "h_L_final": h_L,
         }
 
     def predict(
@@ -388,8 +373,8 @@ class HRM_4x4_Simple(nn.Module):
         self.eval()
         with torch.no_grad():
             outputs = self.forward(x)
-            cell_indices = outputs['cell_logits'].argmax(dim=-1)
-            digit_indices = outputs['digit_logits'].argmax(dim=-1)
+            cell_indices = outputs["cell_logits"].argmax(dim=-1)
+            digit_indices = outputs["digit_logits"].argmax(dim=-1)
         return cell_indices, digit_indices
 
     def get_halt_penalty(
@@ -413,12 +398,12 @@ class HRM_4x4_Simple(nn.Module):
         Returns:
             Scalar tensor with the halt penalty value.
         """
-        trace: SimpleExecutionTrace = outputs['trace']
+        trace: SimpleExecutionTrace = outputs["trace"]
         ponder_cost = trace.num_steps / trace.max_steps
 
         return torch.tensor(
             lambda_halt * ponder_cost,
-            device=outputs['cell_logits'].device,
+            device=outputs["cell_logits"].device,
         )
 
     def get_convergence_loss(
@@ -441,10 +426,10 @@ class HRM_4x4_Simple(nn.Module):
         Returns:
             Scalar tensor with the convergence loss value.
         """
-        trace: SimpleExecutionTrace = outputs['trace']
+        trace: SimpleExecutionTrace = outputs["trace"]
         loss = max(0.0, trace.final_residual - target_residual)
 
-        return torch.tensor(loss, device=outputs['cell_logits'].device)
+        return torch.tensor(loss, device=outputs["cell_logits"].device)
 
     def get_state_dynamics(
         self,
@@ -465,13 +450,13 @@ class HRM_4x4_Simple(nn.Module):
                 - 'converged': Whether iteration converged
                 - 'final_residual': Final residual value
         """
-        trace: SimpleExecutionTrace = outputs['trace']
+        trace: SimpleExecutionTrace = outputs["trace"]
 
         return {
-            'residual_history': trace.residual_history,
-            'total_steps': trace.num_steps,
-            'converged': trace.converged,
-            'final_residual': trace.final_residual,
+            "residual_history": trace.residual_history,
+            "total_steps": trace.num_steps,
+            "converged": trace.converged,
+            "final_residual": trace.final_residual,
         }
 
     def extra_repr(self) -> str:

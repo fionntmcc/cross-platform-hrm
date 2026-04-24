@@ -1,15 +1,19 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 HRM Core Logic — Prototype Archive
 
 These modules implement the core iteration and halting logic for the full
-Unified HRM (H+L with ACT). They have been moved here from hrm/core/ as they
-are no longer in the active SimplifiedHRM dependency chain.
+Unified HRM (H+L with ACT). In earlier revisions these lived under hrm/core/;
+they are now kept only in this prototype archive and are no longer in the
+active SimplifiedHRM dependency chain.
 
 Active codebase (SimplifiedHRM) uses fixed reasoning steps with no ACT halting,
 so none of these are needed for training/inference with train_simplified.py.
-
-hrm.core still re-exports everything here for backward compatibility with
-the existing test suite.
 """
 
 from hrm.prototype.core.iteration import (

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 ONNX Export for Simplified HRM (L-Module Only)
 
@@ -47,10 +53,6 @@ Usage:
         --puzzle sudoku_9x9 --reasoning-steps 8  --output model/simplified_hrm_9x9_s8.onnx
     python scripts/export_onnx.py --model model/simplified_hrm_sudoku_9x9_best.pt \\
         --puzzle sudoku_9x9 --reasoning-steps 4  --output model/simplified_hrm_9x9_s4.onnx
-
-Authors:
-    - Kyrylo Kozlovskyi (G00425385)
-    - Fionn McCarthy (G00414386)
 """
 
 import argparse
@@ -88,9 +90,7 @@ def _check_onnx_export_dependencies() -> None:
         ) from exc
 
 
-# -----------------------------------------------------------------------
 # ONNX-compatible wrapper
-# -----------------------------------------------------------------------
 class SimplifiedHRMForONNX(nn.Module):
     """
     ONNX-exportable wrapper around SimplifiedHRM.
@@ -134,7 +134,7 @@ class SimplifiedHRMForONNX(nn.Module):
         is_maze = puzzle_type == PuzzleType.MAZE
         self.use_feedback = model.config.use_prediction_feedback and not is_maze
 
-        # ---- Share model sub-modules (no weight duplication) ----
+        # Share model sub-modules (no weight duplication)
         # Reference the sub-layers of InputEmbedding directly so that
         # _embed() can inline the forward without PuzzleType dispatch.
         self.tok_emb = model.input_net.tok_emb
@@ -150,23 +150,23 @@ class SimplifiedHRMForONNX(nn.Module):
         else:
             self.output_proj = model.output_head.heads["maze"]
 
-        # ---- Bake puzzle type index as buffer ----
+        # Bake puzzle type index as buffer
         self.register_buffer(
             "puzzle_type_idx",
             torch.tensor([puzzle_type.value - 1], dtype=torch.long),
         )
 
-        # ---- Copy z_L_init buffer ----
+        # Copy z_L_init buffer
         self.register_buffer("z_L_init", model.z_L_init.clone())
 
-        # ---- Embedding scale factor (Python constant, OK for tracing) ----
+        # Embedding scale factor (Python constant, OK for tracing)
         self._scale = math.sqrt(model.config.hidden_size)
 
-        # ---- Force standard attention (no FlashAttention for ONNX) ----
+        # Force standard attention (no FlashAttention for ONNX)
         for layer in self.reasoning.layers:
             layer.self_attn._has_flash_attn = False
 
-        # ---- Pre-compute RoPE and register as buffers ----
+        # Pre-compute RoPE and register as buffers
         with torch.no_grad():
             cos, sin = model.rotary_emb()
         self.register_buffer("rope_cos", cos)
@@ -240,9 +240,7 @@ class SimplifiedHRMForONNX(nn.Module):
         return logits.argmax(dim=-1)
 
 
-# -----------------------------------------------------------------------
 # Checkpoint loading
-# -----------------------------------------------------------------------
 def load_model(checkpoint_path: str, device: str = "cpu") -> SimplifiedHRM:
     """Load a trained SimplifiedHRM from checkpoint.
 
@@ -280,9 +278,7 @@ def load_model(checkpoint_path: str, device: str = "cpu") -> SimplifiedHRM:
     return model
 
 
-# -----------------------------------------------------------------------
 # Export
-# -----------------------------------------------------------------------
 def export_to_onnx(
     model: SimplifiedHRM,
     puzzle_type: PuzzleType,
@@ -368,9 +364,7 @@ def export_to_onnx(
     return output_path
 
 
-# -----------------------------------------------------------------------
 # Verification
-# -----------------------------------------------------------------------
 def verify_onnx(
     onnx_path: str,
     pytorch_model: SimplifiedHRM,
@@ -482,9 +476,7 @@ def verify_onnx(
     return all_match
 
 
-# -----------------------------------------------------------------------
 # CLI
-# -----------------------------------------------------------------------
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Export SimplifiedHRM to ONNX format",

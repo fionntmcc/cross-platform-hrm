@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Visualise HRM Reasoning Steps
 
@@ -35,19 +41,20 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from hrm.model_unified import UnifiedHRM, UnifiedHRMConfig, PuzzleType, PUZZLE_CONFIGS
 
 # ── ANSI colours ────────────────────────────────────────────────────────────
-RESET   = "\033[0m"
-BOLD    = "\033[1m"
-DIM     = "\033[2m"
-RED     = "\033[91m"
-GREEN   = "\033[92m"
-YELLOW  = "\033[93m"
-CYAN    = "\033[96m"
-GREY    = "\033[90m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+DIM = "\033[2m"
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+CYAN = "\033[96m"
+GREY = "\033[90m"
 BG_GREEN = "\033[42m"
-BG_RED   = "\033[41m"
+BG_RED = "\033[41m"
 
 
 # ── Grid Printers ───────────────────────────────────────────────────────────
+
 
 def _colour_cell(value: int, original: int, target: int = -1) -> str:
     """Colour a cell value: grey if given, green if correct, red if wrong, yellow if filled."""
@@ -66,8 +73,9 @@ def _colour_cell(value: int, original: int, target: int = -1) -> str:
     return f"{YELLOW}{s}{RESET}"
 
 
-def print_sudoku_grid(grid: np.ndarray, original: np.ndarray,
-                      target: np.ndarray = None, grid_size: int = 9):
+def print_sudoku_grid(
+    grid: np.ndarray, original: np.ndarray, target: np.ndarray = None, grid_size: int = 9
+):
     """Print a Sudoku grid with box lines and colour coding."""
     box_h = int(np.sqrt(grid_size))
     box_w = grid_size // box_h  # handles non-square boxes (e.g., 2x3 for 6x6)
@@ -94,8 +102,7 @@ def print_sudoku_grid(grid: np.ndarray, original: np.ndarray,
     print("└" + "┴".join([seg] * box_h) + "┘")
 
 
-def print_maze_grid(grid: np.ndarray, original: np.ndarray,
-                    target: np.ndarray = None):
+def print_maze_grid(grid: np.ndarray, original: np.ndarray, target: np.ndarray = None):
     """Print a maze grid with symbols."""
     MAZE_SYMBOLS = {0: "█", 1: " ", 2: "S", 3: "G"}
     rows, cols = grid.shape
@@ -120,11 +127,12 @@ def print_maze_grid(grid: np.ndarray, original: np.ndarray,
     print("└" + "─" * cols + "┘")
 
 
-def print_grid(grid: np.ndarray, original: np.ndarray,
-               puzzle_type: PuzzleType, target: np.ndarray = None):
+def print_grid(
+    grid: np.ndarray, original: np.ndarray, puzzle_type: PuzzleType, target: np.ndarray = None
+):
     """Dispatch to the right printer."""
     if puzzle_type in (PuzzleType.SUDOKU_4X4, PuzzleType.SUDOKU_9X9):
-        gs = PUZZLE_CONFIGS[puzzle_type]['grid_size']
+        gs = PUZZLE_CONFIGS[puzzle_type]["grid_size"]
         print_sudoku_grid(grid, original, target, grid_size=gs)
     else:
         print_maze_grid(grid, original, target)
@@ -132,8 +140,8 @@ def print_grid(grid: np.ndarray, original: np.ndarray,
 
 # ── Accuracy helpers ────────────────────────────────────────────────────────
 
-def compute_accuracy(pred: np.ndarray, target: np.ndarray,
-                     original: np.ndarray) -> float:
+
+def compute_accuracy(pred: np.ndarray, target: np.ndarray, original: np.ndarray) -> float:
     """Cell-level accuracy on empty cells only."""
     mask = original.flatten() == 0
     if mask.sum() == 0:
@@ -143,42 +151,47 @@ def compute_accuracy(pred: np.ndarray, target: np.ndarray,
 
 # ── Sample puzzles ──────────────────────────────────────────────────────────
 
-SAMPLE_4X4 = np.array([
-    [1, 0, 0, 4],
-    [0, 0, 1, 0],
-    [0, 1, 0, 0],
-    [4, 0, 0, 1],
-])
+SAMPLE_4X4 = np.array(
+    [
+        [1, 0, 0, 4],
+        [0, 0, 1, 0],
+        [0, 1, 0, 0],
+        [4, 0, 0, 1],
+    ]
+)
 
-SAMPLE_9X9 = np.array([
-    [5, 3, 0, 0, 7, 0, 0, 0, 0],
-    [6, 0, 0, 1, 9, 5, 0, 0, 0],
-    [0, 9, 8, 0, 0, 0, 0, 6, 0],
-    [8, 0, 0, 0, 6, 0, 0, 0, 3],
-    [4, 0, 0, 8, 0, 3, 0, 0, 1],
-    [7, 0, 0, 0, 2, 0, 0, 0, 6],
-    [0, 6, 0, 0, 0, 0, 2, 8, 0],
-    [0, 0, 0, 4, 1, 9, 0, 0, 5],
-    [0, 0, 0, 0, 8, 0, 0, 7, 9],
-])
+SAMPLE_9X9 = np.array(
+    [
+        [5, 3, 0, 0, 7, 0, 0, 0, 0],
+        [6, 0, 0, 1, 9, 5, 0, 0, 0],
+        [0, 9, 8, 0, 0, 0, 0, 6, 0],
+        [8, 0, 0, 0, 6, 0, 0, 0, 3],
+        [4, 0, 0, 8, 0, 3, 0, 0, 1],
+        [7, 0, 0, 0, 2, 0, 0, 0, 6],
+        [0, 6, 0, 0, 0, 0, 2, 8, 0],
+        [0, 0, 0, 4, 1, 9, 0, 0, 5],
+        [0, 0, 0, 0, 8, 0, 0, 7, 9],
+    ]
+)
 
 
 # ── Main logic ──────────────────────────────────────────────────────────────
 
+
 def load_model(model_path: str, device: torch.device) -> UnifiedHRM:
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-    config = checkpoint.get('config', UnifiedHRMConfig())
+    config = checkpoint.get("config", UnifiedHRMConfig())
     model = UnifiedHRM(config)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device).eval()
     return model
 
 
 def parse_puzzle_type(name: str) -> PuzzleType:
     mapping = {
-        'sudoku_4x4': PuzzleType.SUDOKU_4X4,
-        'sudoku_9x9': PuzzleType.SUDOKU_9X9,
-        'maze': PuzzleType.MAZE,
+        "sudoku_4x4": PuzzleType.SUDOKU_4X4,
+        "sudoku_9x9": PuzzleType.SUDOKU_9X9,
+        "maze": PuzzleType.MAZE,
     }
     if name not in mapping:
         raise ValueError(f"Unknown puzzle type '{name}'. Choose from: {list(mapping.keys())}")
@@ -188,8 +201,8 @@ def parse_puzzle_type(name: str) -> PuzzleType:
 def get_grid_shape(puzzle_type: PuzzleType, seq_len: int):
     """Return (rows, cols) for reshaping flat predictions to a grid."""
     cfg = PUZZLE_CONFIGS[puzzle_type]
-    if cfg['grid_size'] is not None:
-        gs = cfg['grid_size']
+    if cfg["grid_size"] is not None:
+        gs = cfg["grid_size"]
         return (gs, gs)
     # Maze: infer square grid from seq_len
     side = int(np.sqrt(seq_len))
@@ -197,11 +210,16 @@ def get_grid_shape(puzzle_type: PuzzleType, seq_len: int):
     return (side, side)
 
 
-def visualise(model: UnifiedHRM, puzzle_flat: np.ndarray,
-              puzzle_type: PuzzleType, target_flat: np.ndarray = None,
-              h_cycles: int = None, l_steps: int = None,
-              halt_max_steps: int = None,
-              delay: float = 0.0):
+def visualise(
+    model: UnifiedHRM,
+    puzzle_flat: np.ndarray,
+    puzzle_type: PuzzleType,
+    target_flat: np.ndarray = None,
+    h_cycles: int = None,
+    l_steps: int = None,
+    halt_max_steps: int = None,
+    delay: float = 0.0,
+):
     """
     Run the model and print the grid after each outer ACT step.
 
@@ -227,16 +245,16 @@ def visualise(model: UnifiedHRM, puzzle_flat: np.ndarray,
             return_intermediates=True,
         )
 
-    step_preds = output['intermediates']['step_predictions']
-    q_halt_logits = output['intermediates'].get('q_halt_logits', [])
+    step_preds = output["intermediates"]["step_predictions"]
+    q_halt_logits = output["intermediates"].get("q_halt_logits", [])
     grid_shape = get_grid_shape(puzzle_type, puzzle_flat.shape[0])
     original_grid = puzzle_flat.reshape(grid_shape)
     target_grid = target_flat.reshape(grid_shape) if target_flat is not None else None
 
     total_steps = len(step_preds)
-    outer_steps = output['outer_steps_used']
-    h_per_step = output['h_cycles_per_step']
-    l_per_step = output['l_cycles_per_step']
+    outer_steps = output["outer_steps_used"]
+    h_per_step = output["h_cycles_per_step"]
+    l_per_step = output["l_cycles_per_step"]
 
     print(f"\n{BOLD}{'═' * 50}{RESET}")
     print(f"{BOLD}  HRM Step-by-Step Visualisation{RESET}")
@@ -277,38 +295,56 @@ def visualise(model: UnifiedHRM, puzzle_flat: np.ndarray,
         final_preds = step_preds[-1][0].cpu().numpy().reshape(grid_shape)
         final_acc = compute_accuracy(final_preds, target_grid, original_grid)
         n_empty = (original_grid == 0).sum()
-        n_correct = ((final_preds.flatten() == target_grid.flatten()) &
-                     (original_grid.flatten() == 0)).sum()
-        print(f"\n{BOLD}Summary:{RESET}  {n_correct}/{n_empty} empty cells correct ({final_acc:.1%})")
+        n_correct = (
+            (final_preds.flatten() == target_grid.flatten()) & (original_grid.flatten() == 0)
+        ).sum()
+        print(
+            f"\n{BOLD}Summary:{RESET}  {n_correct}/{n_empty} empty cells correct ({final_acc:.1%})"
+        )
 
     print()
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Visualise HRM reasoning at each timestep',
+        description="Visualise HRM reasoning at each timestep",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('--model', type=str, required=True,
-                        help='Path to trained model checkpoint')
-    parser.add_argument('--puzzle', type=str, required=True,
-                        choices=['sudoku_4x4', 'sudoku_9x9', 'maze'],
-                        help='Puzzle type')
-    parser.add_argument('--input', type=str, default=None,
-                        help='Puzzle values as comma-separated integers (row-major, 0=empty). '
-                             'If omitted, uses a built-in sample puzzle.')
-    parser.add_argument('--target', type=str, default=None,
-                        help='Target solution as comma-separated integers (for colour coding)')
-    parser.add_argument('--halt-max-steps', type=int, default=None,
-                        help='Override max outer ACT halting steps (more = more snapshots)')
-    parser.add_argument('--h-cycles', type=int, default=None,
-                        help='Override H-cycles per inner call')
-    parser.add_argument('--l-steps', type=int, default=None,
-                        help='Override L-cycles per H-cycle')
-    parser.add_argument('--delay', type=float, default=0.3,
-                        help='Seconds to pause between steps (default: 0.3)')
-    parser.add_argument('--device', type=str, default='cpu',
-                        help='Device (cpu, cuda, mps)')
+    parser.add_argument("--model", type=str, required=True, help="Path to trained model checkpoint")
+    parser.add_argument(
+        "--puzzle",
+        type=str,
+        required=True,
+        choices=["sudoku_4x4", "sudoku_9x9", "maze"],
+        help="Puzzle type",
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        default=None,
+        help="Puzzle values as comma-separated integers (row-major, 0=empty). "
+        "If omitted, uses a built-in sample puzzle.",
+    )
+    parser.add_argument(
+        "--target",
+        type=str,
+        default=None,
+        help="Target solution as comma-separated integers (for colour coding)",
+    )
+    parser.add_argument(
+        "--halt-max-steps",
+        type=int,
+        default=None,
+        help="Override max outer ACT halting steps (more = more snapshots)",
+    )
+    parser.add_argument(
+        "--h-cycles", type=int, default=None, help="Override H-cycles per inner call"
+    )
+    parser.add_argument("--l-steps", type=int, default=None, help="Override L-cycles per H-cycle")
+    parser.add_argument(
+        "--delay", type=float, default=0.3, help="Seconds to pause between steps (default: 0.3)"
+    )
+    parser.add_argument("--device", type=str, default="cpu", help="Device (cpu, cuda, mps)")
 
     args = parser.parse_args()
     device = torch.device(args.device)
@@ -321,7 +357,7 @@ def main():
 
     # Parse or use sample puzzle
     if args.input:
-        puzzle_flat = np.array([int(x.strip()) for x in args.input.split(',')], dtype=np.int64)
+        puzzle_flat = np.array([int(x.strip()) for x in args.input.split(",")], dtype=np.int64)
     else:
         if puzzle_type == PuzzleType.SUDOKU_4X4:
             puzzle_flat = SAMPLE_4X4.flatten()
@@ -334,10 +370,12 @@ def main():
     # Parse target if given
     target_flat = None
     if args.target:
-        target_flat = np.array([int(x.strip()) for x in args.target.split(',')], dtype=np.int64)
+        target_flat = np.array([int(x.strip()) for x in args.target.split(",")], dtype=np.int64)
 
     visualise(
-        model, puzzle_flat, puzzle_type,
+        model,
+        puzzle_flat,
+        puzzle_type,
         target_flat=target_flat,
         h_cycles=args.h_cycles,
         l_steps=args.l_steps,
@@ -346,5 +384,5 @@ def main():
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

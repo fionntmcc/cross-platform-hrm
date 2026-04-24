@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 CLI tool for generating puzzle datasets in JSON/CSV formats.
 
@@ -10,7 +16,6 @@ Usage:
 """
 
 import argparse
-import sys
 
 from hrm.data.io import save_dataset
 from hrm.data.sudoku_generator import generate_sudoku_dataset
@@ -25,7 +30,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     sub = parser.add_subparsers(dest="puzzle_type", required=True)
 
-    # -- Sudoku subcommand ------------------------------------------------
+    # Sudoku subcommand
     sp_sudoku = sub.add_parser("sudoku", help="Generate Sudoku dataset")
     sp_sudoku.add_argument(
         "--size", type=int, default=9, choices=[4, 9], help="Grid size (default: 9)"
@@ -46,7 +51,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Output format (auto-detected from extension if omitted)",
     )
 
-    # -- Maze subcommand --------------------------------------------------
+    # Maze subcommand
     sp_maze = sub.add_parser("maze", help="Generate weighted-maze dataset")
     sp_maze.add_argument("--size", type=int, default=15, help="Grid size (>= 7, default: 15)")
     sp_maze.add_argument("--num", type=int, default=100, help="Number of puzzles (default: 100)")

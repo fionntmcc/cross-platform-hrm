@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for hrm.training.metrics
 
@@ -18,9 +24,7 @@ from hrm.training.metrics import (
     compute_residuals,
 )
 
-# =========================================================================
 # compute_accuracy
-# =========================================================================
 
 
 class TestComputeAccuracy:
@@ -72,9 +76,7 @@ class TestComputeAccuracy:
         assert compute_accuracy(preds, targets) == 1.0
 
 
-# =========================================================================
 # compute_puzzle_accuracy
-# =========================================================================
 
 
 class TestComputePuzzleAccuracy:
@@ -119,9 +121,7 @@ class TestComputePuzzleAccuracy:
         assert isinstance(compute_puzzle_accuracy(preds, targets), float)
 
 
-# =========================================================================
 # compute_residuals
-# =========================================================================
 
 
 class TestComputeResiduals:
@@ -168,9 +168,7 @@ class TestComputeResiduals:
         assert len(residuals) == 4
 
 
-# =========================================================================
 # MetricsTracker
-# =========================================================================
 
 
 class TestMetricsTracker:

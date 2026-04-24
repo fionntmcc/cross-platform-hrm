@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for HRM_4x4_Simple (L-Module Only Variant)
 
@@ -24,9 +30,8 @@ from hrm.layers.worker import WorkerModule
 from hrm.layers.output_network import OutputNetwork
 
 
-# =============================================================================
 # Fixtures
-# =============================================================================
+
 
 @pytest.fixture
 def model():
@@ -50,12 +55,7 @@ def model_custom():
 @pytest.fixture
 def sample_puzzle():
     """Create a sample 4x4 Sudoku puzzle tensor."""
-    return torch.tensor([[
-        [0, 2, 0, 4],
-        [4, 0, 2, 0],
-        [0, 4, 0, 2],
-        [2, 0, 4, 0]
-    ]])
+    return torch.tensor([[[0, 2, 0, 4], [4, 0, 2, 0], [0, 4, 0, 2], [2, 0, 4, 0]]])
 
 
 @pytest.fixture
@@ -64,21 +64,20 @@ def batch_puzzles():
     return torch.randint(0, 5, (8, 4, 4))
 
 
-# =============================================================================
 # Test Model Initialisation
-# =============================================================================
+
 
 class TestModelInitialisation:
     """Verify HRM_4x4_Simple initialises correctly without Planner."""
 
     def test_has_input_network(self, model):
         """Model has InputNetwork component."""
-        assert hasattr(model, 'input_network')
+        assert hasattr(model, "input_network")
         assert isinstance(model.input_network, InputNetwork)
 
     def test_has_worker_layers(self, model):
         """Model has worker_layers as ModuleList."""
-        assert hasattr(model, 'worker_layers')
+        assert hasattr(model, "worker_layers")
         assert isinstance(model.worker_layers, nn.ModuleList)
 
     def test_worker_layers_count_default(self, model):
@@ -92,20 +91,20 @@ class TestModelInitialisation:
 
     def test_has_output_network(self, model):
         """Model has OutputNetwork component."""
-        assert hasattr(model, 'output_network')
+        assert hasattr(model, "output_network")
         assert isinstance(model.output_network, OutputNetwork)
 
     def test_no_planner_module(self, model):
         """Model does NOT have a Planner module."""
-        assert not hasattr(model, 'planner')
+        assert not hasattr(model, "planner")
 
     def test_no_h_H_init(self, model):
         """Model does NOT have h_H initial state (no Planner)."""
-        assert not hasattr(model, 'h_H_init')
+        assert not hasattr(model, "h_H_init")
 
     def test_has_learned_h_L_init(self, model):
         """Model has learned h_L initial state parameter."""
-        assert hasattr(model, 'h_L_init')
+        assert hasattr(model, "h_L_init")
         assert isinstance(model.h_L_init, nn.Parameter)
         assert model.h_L_init.shape == (1, model.hidden_dim)
 
@@ -137,9 +136,8 @@ class TestModelInitialisation:
         assert len(model_custom.worker_layers) == 4
 
 
-# =============================================================================
 # Test Forward Pass
-# =============================================================================
+
 
 class TestForwardPass:
     """Verify forward() returns predictions + execution traces."""
@@ -152,53 +150,52 @@ class TestForwardPass:
     def test_forward_has_cell_logits(self, model, sample_puzzle):
         """Output contains cell_logits with correct shape."""
         outputs = model(sample_puzzle)
-        assert 'cell_logits' in outputs
-        assert outputs['cell_logits'].shape == (1, 16)
+        assert "cell_logits" in outputs
+        assert outputs["cell_logits"].shape == (1, 16)
 
     def test_forward_has_digit_logits(self, model, sample_puzzle):
         """Output contains digit_logits with correct shape."""
         outputs = model(sample_puzzle)
-        assert 'digit_logits' in outputs
-        assert outputs['digit_logits'].shape == (1, 4)
+        assert "digit_logits" in outputs
+        assert outputs["digit_logits"].shape == (1, 4)
 
     def test_forward_has_trace(self, model, sample_puzzle):
         """Output contains execution trace."""
         outputs = model(sample_puzzle)
-        assert 'trace' in outputs
-        assert isinstance(outputs['trace'], SimpleExecutionTrace)
+        assert "trace" in outputs
+        assert isinstance(outputs["trace"], SimpleExecutionTrace)
 
     def test_forward_has_final_h_L(self, model, sample_puzzle):
         """Output contains final h_L state."""
         outputs = model(sample_puzzle)
-        assert 'h_L_final' in outputs
-        assert outputs['h_L_final'].shape == (1, model.hidden_dim)
+        assert "h_L_final" in outputs
+        assert outputs["h_L_final"].shape == (1, model.hidden_dim)
 
     def test_forward_no_h_H_final(self, model, sample_puzzle):
         """Output does NOT contain h_H_final (no Planner)."""
         outputs = model(sample_puzzle)
-        assert 'h_H_final' not in outputs
+        assert "h_H_final" not in outputs
 
     def test_forward_batch_processing(self, model, batch_puzzles):
         """Forward pass handles batched inputs correctly."""
         outputs = model(batch_puzzles)
         batch_size = batch_puzzles.shape[0]
 
-        assert outputs['cell_logits'].shape == (batch_size, 16)
-        assert outputs['digit_logits'].shape == (batch_size, 4)
-        assert outputs['h_L_final'].shape == (batch_size, model.hidden_dim)
+        assert outputs["cell_logits"].shape == (batch_size, 16)
+        assert outputs["digit_logits"].shape == (batch_size, 4)
+        assert outputs["h_L_final"].shape == (batch_size, model.hidden_dim)
 
     def test_forward_single_sample(self, model):
         """Forward pass works with batch size 1."""
         puzzle = torch.randint(0, 5, (1, 4, 4))
         outputs = model(puzzle)
 
-        assert outputs['cell_logits'].shape == (1, 16)
-        assert outputs['digit_logits'].shape == (1, 4)
+        assert outputs["cell_logits"].shape == (1, 16)
+        assert outputs["digit_logits"].shape == (1, 4)
 
 
-# =============================================================================
 # Test Execution Trace
-# =============================================================================
+
 
 class TestExecutionTrace:
     """Verify execution trace contains correct information."""
@@ -206,28 +203,28 @@ class TestExecutionTrace:
     def test_trace_has_num_steps(self, model, sample_puzzle):
         """Trace records number of steps taken."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.num_steps > 0
 
     def test_trace_steps_bounded(self, model, sample_puzzle):
         """Number of steps is bounded by n_iterations."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.num_steps <= model.n_iterations
 
     def test_trace_max_steps_matches_config(self, model, sample_puzzle):
         """Trace max_steps matches model configuration."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.max_steps == model.n_iterations
 
     def test_trace_has_residual_history(self, model, sample_puzzle):
         """Trace contains residual history when track_history=True."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert len(trace.residual_history) > 0
         assert len(trace.residual_history) == trace.num_steps
@@ -235,7 +232,7 @@ class TestExecutionTrace:
     def test_trace_residuals_non_negative(self, model, sample_puzzle):
         """All residuals are non-negative."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         for residual in trace.residual_history:
             assert residual >= 0.0
@@ -243,46 +240,45 @@ class TestExecutionTrace:
     def test_trace_total_computation_steps(self, model, sample_puzzle):
         """Trace correctly computes total computation steps."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.total_computation_steps == trace.num_steps
 
     def test_trace_effective_depth(self, model, sample_puzzle):
         """Effective depth equals num_steps for flat loop."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.effective_depth == trace.num_steps
 
     def test_trace_has_final_residual(self, model, sample_puzzle):
         """Trace records final residual value."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.final_residual >= 0.0
 
     def test_trace_repr(self, model, sample_puzzle):
         """Trace has informative repr."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
         repr_str = repr(trace)
 
-        assert 'SimpleExecutionTrace' in repr_str
-        assert 'steps=' in repr_str
-        assert 'converged=' in repr_str
+        assert "SimpleExecutionTrace" in repr_str
+        assert "steps=" in repr_str
+        assert "converged=" in repr_str
 
     def test_trace_no_history_when_disabled(self, sample_puzzle):
         """Trace residual history is empty when track_history=False."""
         model = HRM_4x4_Simple(track_history=False)
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert len(trace.residual_history) == 0
 
 
-# =============================================================================
 # Test Convergence Behavior
-# =============================================================================
+
 
 class TestConvergenceBehavior:
     """Verify convergence-based early stopping."""
@@ -295,7 +291,7 @@ class TestConvergenceBehavior:
             convergence_threshold=10.0,  # Very high threshold
         )
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.converged
         assert trace.num_steps < trace.max_steps
@@ -307,15 +303,14 @@ class TestConvergenceBehavior:
             convergence_threshold=1e-20,  # Impossibly low
         )
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
 
         assert trace.num_steps == 5
         assert not trace.converged
 
 
-# =============================================================================
 # Test Halt Penalty
-# =============================================================================
+
 
 class TestHaltPenalty:
     """Verify get_halt_penalty() method."""
@@ -358,9 +353,8 @@ class TestHaltPenalty:
         assert penalty_large.item() > penalty_small.item()
 
 
-# =============================================================================
 # Test Convergence Loss
-# =============================================================================
+
 
 class TestConvergenceLoss:
     """Verify get_convergence_loss() method."""
@@ -394,9 +388,8 @@ class TestConvergenceLoss:
         assert loss.item() == pytest.approx(0.0)
 
 
-# =============================================================================
 # Test Gradient Flow
-# =============================================================================
+
 
 class TestGradientFlow:
     """Verify gradients flow through the simplified model."""
@@ -404,7 +397,7 @@ class TestGradientFlow:
     def test_gradients_flow_to_input_network(self, model, sample_puzzle):
         """Gradients flow to input network parameters."""
         outputs = model(sample_puzzle)
-        loss = outputs['cell_logits'].sum() + outputs['digit_logits'].sum()
+        loss = outputs["cell_logits"].sum() + outputs["digit_logits"].sum()
         loss.backward()
 
         assert model.input_network.embedding.weight.grad is not None
@@ -412,18 +405,16 @@ class TestGradientFlow:
     def test_gradients_flow_to_worker_layers(self, model, sample_puzzle):
         """Gradients flow to all worker layer parameters."""
         outputs = model(sample_puzzle)
-        loss = outputs['cell_logits'].sum() + outputs['digit_logits'].sum()
+        loss = outputs["cell_logits"].sum() + outputs["digit_logits"].sum()
         loss.backward()
 
         for i, worker in enumerate(model.worker_layers):
-            assert worker.input_proj.weight.grad is not None, (
-                f"No gradient for worker_layers[{i}]"
-            )
+            assert worker.input_proj.weight.grad is not None, f"No gradient for worker_layers[{i}]"
 
     def test_gradients_flow_to_output_network(self, model, sample_puzzle):
         """Gradients flow to output network parameters."""
         outputs = model(sample_puzzle)
-        loss = outputs['cell_logits'].sum() + outputs['digit_logits'].sum()
+        loss = outputs["cell_logits"].sum() + outputs["digit_logits"].sum()
         loss.backward()
 
         assert model.output_network.cell_head.weight.grad is not None
@@ -431,7 +422,7 @@ class TestGradientFlow:
     def test_gradients_flow_to_initial_state(self, model, sample_puzzle):
         """Gradients flow to learned h_L initial state."""
         outputs = model(sample_puzzle)
-        loss = outputs['cell_logits'].sum() + outputs['digit_logits'].sum()
+        loss = outputs["cell_logits"].sum() + outputs["digit_logits"].sum()
         loss.backward()
 
         # h_L_init grad may be None due to detach in one-step approx,
@@ -443,18 +434,17 @@ class TestGradientFlow:
 
     def test_no_gradient_to_planner(self, model):
         """No Planner exists, so no Planner gradients."""
-        assert not hasattr(model, 'planner')
+        assert not hasattr(model, "planner")
 
     def test_backward_pass_completes(self, model, batch_puzzles):
         """Full backward pass completes without errors."""
         outputs = model(batch_puzzles)
-        loss = outputs['cell_logits'].sum() + outputs['digit_logits'].sum()
+        loss = outputs["cell_logits"].sum() + outputs["digit_logits"].sum()
         loss.backward()  # Should not raise
 
 
-# =============================================================================
 # Test Predict Method
-# =============================================================================
+
 
 class TestPredictMethod:
     """Verify predict() method for inference."""
@@ -487,9 +477,8 @@ class TestPredictMethod:
         assert digit_idx.shape == (batch_size,)
 
 
-# =============================================================================
 # Test State Dynamics
-# =============================================================================
+
 
 class TestStateDynamics:
     """Verify get_state_dynamics() method."""
@@ -506,29 +495,28 @@ class TestStateDynamics:
         outputs = model(sample_puzzle)
         dynamics = model.get_state_dynamics(outputs)
 
-        assert 'residual_history' in dynamics
-        assert isinstance(dynamics['residual_history'], list)
+        assert "residual_history" in dynamics
+        assert isinstance(dynamics["residual_history"], list)
 
     def test_state_dynamics_has_total_steps(self, model, sample_puzzle):
         """Dynamics contains total computation steps."""
         outputs = model(sample_puzzle)
         dynamics = model.get_state_dynamics(outputs)
 
-        assert 'total_steps' in dynamics
-        assert dynamics['total_steps'] > 0
+        assert "total_steps" in dynamics
+        assert dynamics["total_steps"] > 0
 
     def test_state_dynamics_has_convergence_info(self, model, sample_puzzle):
         """Dynamics contains convergence information."""
         outputs = model(sample_puzzle)
         dynamics = model.get_state_dynamics(outputs)
 
-        assert 'converged' in dynamics
-        assert 'final_residual' in dynamics
+        assert "converged" in dynamics
+        assert "final_residual" in dynamics
 
 
-# =============================================================================
 # Test Input Validation
-# =============================================================================
+
 
 class TestInputValidation:
     """Verify input validation in forward pass."""
@@ -555,9 +543,8 @@ class TestInputValidation:
             model(wrong_dims)
 
 
-# =============================================================================
 # Test Configuration Validation
-# =============================================================================
+
 
 class TestConfigurationValidation:
     """Verify configuration parameter validation."""
@@ -593,9 +580,8 @@ class TestConfigurationValidation:
             HRM_4x4_Simple(convergence_threshold=-1e-3)
 
 
-# =============================================================================
 # Test Factory Function
-# =============================================================================
+
 
 class TestCreateHRM4x4Simple:
     """Verify create_hrm_4x4_simple factory function."""
@@ -626,9 +612,8 @@ class TestCreateHRM4x4Simple:
         assert model.dropout == 0.2
 
 
-# =============================================================================
 # Test Training Mode
-# =============================================================================
+
 
 class TestTrainingMode:
     """Verify model behavior in train vs eval mode."""
@@ -637,7 +622,7 @@ class TestTrainingMode:
         """Train mode forward pass completes."""
         model.train()
         outputs = model(batch_puzzles)
-        assert outputs['cell_logits'] is not None
+        assert outputs["cell_logits"] is not None
 
     def test_eval_mode_deterministic(self, model, batch_puzzles):
         """Eval mode produces deterministic outputs."""
@@ -648,14 +633,13 @@ class TestTrainingMode:
             outputs2 = model(batch_puzzles)
 
         torch.testing.assert_close(
-            outputs1['cell_logits'],
-            outputs2['cell_logits'],
+            outputs1["cell_logits"],
+            outputs2["cell_logits"],
         )
 
 
-# =============================================================================
 # Test Representation
-# =============================================================================
+
 
 class TestRepresentation:
     """Verify string representations."""
@@ -664,23 +648,22 @@ class TestRepresentation:
         """Model has informative extra_repr."""
         repr_str = model.extra_repr()
 
-        assert 'hidden_dim=64' in repr_str
-        assert 'n_iterations=50' in repr_str
-        assert 'n_worker_layers=8' in repr_str
+        assert "hidden_dim=64" in repr_str
+        assert "n_iterations=50" in repr_str
+        assert "n_worker_layers=8" in repr_str
 
     def test_trace_repr(self, model, sample_puzzle):
         """SimpleExecutionTrace has informative repr."""
         outputs = model(sample_puzzle)
-        trace = outputs['trace']
+        trace = outputs["trace"]
         repr_str = repr(trace)
 
-        assert 'SimpleExecutionTrace' in repr_str
-        assert 'steps=' in repr_str
+        assert "SimpleExecutionTrace" in repr_str
+        assert "steps=" in repr_str
 
 
-# =============================================================================
 # Test Comparison with Full HRM Interface
-# =============================================================================
+
 
 class TestInterfaceCompatibility:
     """Verify simplified model provides compatible interface."""
@@ -690,29 +673,28 @@ class TestInterfaceCompatibility:
         outputs = model(sample_puzzle)
 
         # Must have these keys (same as full HRM)
-        assert 'cell_logits' in outputs
-        assert 'digit_logits' in outputs
-        assert 'trace' in outputs
-        assert 'h_L_final' in outputs
+        assert "cell_logits" in outputs
+        assert "digit_logits" in outputs
+        assert "trace" in outputs
+        assert "h_L_final" in outputs
 
     def test_same_logit_shapes(self, model, sample_puzzle):
         """Logit shapes match full HRM output shapes."""
         outputs = model(sample_puzzle)
 
-        assert outputs['cell_logits'].shape == (1, 16)
-        assert outputs['digit_logits'].shape == (1, 4)
+        assert outputs["cell_logits"].shape == (1, 16)
+        assert outputs["digit_logits"].shape == (1, 4)
 
     def test_has_same_helper_methods(self, model):
         """Model has same helper methods as full HRM."""
-        assert hasattr(model, 'predict')
-        assert hasattr(model, 'get_halt_penalty')
-        assert hasattr(model, 'get_convergence_loss')
-        assert hasattr(model, 'get_state_dynamics')
+        assert hasattr(model, "predict")
+        assert hasattr(model, "get_halt_penalty")
+        assert hasattr(model, "get_convergence_loss")
+        assert hasattr(model, "get_state_dynamics")
 
 
-# =============================================================================
 # Test Parameter Count (fewer than full when layer count equal)
-# =============================================================================
+
 
 class TestParameterEfficiency:
     """Verify parameter count properties."""
@@ -721,14 +703,14 @@ class TestParameterEfficiency:
         """No Planner-related parameters exist."""
         param_names = [name for name, _ in model.named_parameters()]
         for name in param_names:
-            assert 'planner' not in name.lower()
+            assert "planner" not in name.lower()
 
     def test_no_h_H_init_parameter(self, model):
         """No h_H_init parameter exists."""
         param_names = [name for name, _ in model.named_parameters()]
-        assert 'h_H_init' not in param_names
+        assert "h_H_init" not in param_names
 
     def test_has_h_L_init_parameter(self, model):
         """h_L_init parameter exists."""
         param_names = [name for name, _ in model.named_parameters()]
-        assert 'h_L_init' in param_names
+        assert "h_L_init" in param_names

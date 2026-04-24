@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
@@ -32,9 +38,7 @@ dev = [
 where = ["."]
 include = ["hrm*"]
 
-# =============================================================================
 # Black Configuration
-# =============================================================================
 [tool.black]
 line-length = 100
 target-version = ["py310"]
@@ -46,9 +50,7 @@ extend-exclude = '''
 )
 '''
 
-# =============================================================================
 # Ruff Configuration
-# =============================================================================
 [tool.ruff]
 line-length = 100
 target-version = "py310"
@@ -95,9 +97,7 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["hrm"]
 
-# =============================================================================
 # Pytest Configuration
-# =============================================================================
 [tool.pytest.ini_options]
 testpaths = ["test/hrm_test", "test/other"]
 python_files = ["test_*.py"]
@@ -112,9 +112,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
 
-# =============================================================================
 # Coverage Configuration
-# =============================================================================
 [tool.coverage.run]
 source = ["hrm"]
 omit = [

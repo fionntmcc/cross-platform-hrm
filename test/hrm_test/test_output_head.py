@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for OutputHead (Simplified HRM)
 
@@ -17,9 +23,7 @@ import torch
 from hrm.layers.output_simplified import OutputHead
 from hrm.model_simplified import PuzzleType, SimplifiedHRMConfig
 
-# =============================================================================
 # Fixtures
-# =============================================================================
 
 
 @pytest.fixture
@@ -37,9 +41,7 @@ def head(config):
     return OutputHead(config)
 
 
-# =============================================================================
 # Output shapes per puzzle type
-# =============================================================================
 
 
 class TestOutputShapes:
@@ -69,9 +71,7 @@ class TestOutputShapes:
         assert logits.shape == (1, 81, 10)
 
 
-# =============================================================================
 # Architecture
-# =============================================================================
 
 
 class TestArchitecture:
@@ -99,9 +99,7 @@ class TestArchitecture:
         assert "hidden_size" in r
 
 
-# =============================================================================
 # Different puzzle types produce different outputs
-# =============================================================================
 
 
 class TestPuzzleDispatch:
@@ -123,9 +121,7 @@ class TestPuzzleDispatch:
         assert logits_maze.shape[-1] == 2
 
 
-# =============================================================================
 # Gradient flow
-# =============================================================================
 
 
 class TestGradients:

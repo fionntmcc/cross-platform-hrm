@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Maze Visualiser — Publication-Quality Figures for HRM Dissertation
 
@@ -53,9 +59,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# ---------------------------------------------------------------------------
 # Lazy matplotlib import (allows --help without a display)
-# ---------------------------------------------------------------------------
 _mpl_cache = None
 
 def _import_mpl(interactive: bool = False):
@@ -73,9 +77,7 @@ def _import_mpl(interactive: bool = False):
     return _mpl_cache
 
 
-# ---------------------------------------------------------------------------
 # Maze token constants (must match weighted_maze_generator.py)
-# ---------------------------------------------------------------------------
 WALL  = 0
 PATH  = 1
 START = 2
@@ -83,9 +85,7 @@ GOAL  = 3
 MIN_WEIGHT = 4
 MAX_WEIGHT = 9
 
-# ---------------------------------------------------------------------------
 # Colour palette — colour-blind-safe, print-friendly
-# ---------------------------------------------------------------------------
 # Maze structure colours
 CLR_WALL       = "#2d2d2d"    # near-black
 CLR_FLOOR      = "#f0ece3"    # warm off-white

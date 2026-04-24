@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """Tests for hrm.data.io — JSON/CSV dataset save and load."""
 
 import json
@@ -8,9 +14,7 @@ import pytest
 
 from hrm.data.io import load_dataset, save_dataset
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 
 def _make_sudoku_dataset(n: int = 5, grid_size: int = 4) -> dict:
@@ -54,9 +58,7 @@ def _make_maze_dataset(n: int = 5, grid_size: int = 15) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # JSON round-trip tests
-# ---------------------------------------------------------------------------
 
 
 class TestJsonRoundTrip:
@@ -107,9 +109,7 @@ class TestJsonRoundTrip:
         assert "solution" in doc["puzzles"][0]
 
 
-# ---------------------------------------------------------------------------
 # CSV round-trip tests
-# ---------------------------------------------------------------------------
 
 
 class TestCsvRoundTrip:
@@ -132,9 +132,7 @@ class TestCsvRoundTrip:
         assert loaded["file_metadata"]["puzzle_type"] == "maze"
 
 
-# ---------------------------------------------------------------------------
 # Error handling
-# ---------------------------------------------------------------------------
 
 
 class TestErrorHandling:
@@ -154,9 +152,7 @@ class TestErrorHandling:
             load_dataset(bad)
 
 
-# ---------------------------------------------------------------------------
 # Extension normalisation
-# ---------------------------------------------------------------------------
 
 
 class TestExtensionNormalisation:
@@ -171,9 +167,7 @@ class TestExtensionNormalisation:
         assert out.suffix == ".csv"
 
 
-# ---------------------------------------------------------------------------
 # Dataset without metadata
-# ---------------------------------------------------------------------------
 
 
 class TestNoPerPuzzleMetadata:

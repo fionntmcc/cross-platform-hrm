@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Test suite for the weighted maze generator.
 
@@ -28,9 +34,7 @@ from hrm.data.weighted_maze_generator import (
     generate_weighted_maze_dataset,
 )
 
-# =============================================================================
 # Token encoding tests
-# =============================================================================
 
 
 class TestTokenEncoding:
@@ -60,9 +64,7 @@ class TestTokenEncoding:
             assert gen._cell_cost(w) == w
 
 
-# =============================================================================
 # Grid structure tests
-# =============================================================================
 
 
 class TestGridStructure:
@@ -128,9 +130,7 @@ class TestGridStructure:
             WeightedMazeGenerator(grid_size=5, seed=0)
 
 
-# =============================================================================
 # Dijkstra solver tests
-# =============================================================================
 
 
 class TestDijkstraSolver:
@@ -218,9 +218,7 @@ class TestDijkstraSolver:
         assert path == [(1, 1), (1, 2)]
 
 
-# =============================================================================
 # Solution validity tests
-# =============================================================================
 
 
 class TestSolutionValidity:
@@ -330,9 +328,7 @@ class TestSolutionValidity:
             ), "Every generated puzzle must have a unique optimal path"
 
 
-# =============================================================================
 # Dataset generation tests
-# =============================================================================
 
 
 class TestDatasetGeneration:
@@ -389,9 +385,7 @@ class TestDatasetGeneration:
         assert dataset["problems"].shape[2] == 11
 
 
-# =============================================================================
 # Reproducibility tests
-# =============================================================================
 
 
 class TestReproducibility:
@@ -421,9 +415,7 @@ class TestReproducibility:
         np.testing.assert_array_equal(d1["solutions"], d2["solutions"])
 
 
-# =============================================================================
 # Visualization test
-# =============================================================================
 
 
 class TestVisualization:
@@ -444,9 +436,7 @@ class TestVisualization:
         assert "*" in text
 
 
-# =============================================================================
 # Integration: end-to-end HRM compatibility check
-# =============================================================================
 
 
 class TestHRMCompatibility:
@@ -494,9 +484,7 @@ class TestHRMCompatibility:
         assert MAX_WEIGHT + 1 <= 16, "Vocabulary should be small for HRM (typically < 16 tokens)"
 
 
-# =============================================================================
 # Run tests
-# =============================================================================
 
 if __name__ == "__main__":
     # Run with pytest if available, otherwise manual run

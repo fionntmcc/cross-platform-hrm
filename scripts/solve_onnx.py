@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 ONNX Inference & Benchmarking for Simplified HRM
 
@@ -41,10 +47,6 @@ Usage:
     python scripts/solve_onnx.py \\
         --model model/simplified_hrm_maze_11x11_s4.onnx --puzzle maze \\
         --maze-size 11 --benchmark
-
-Authors:
-    - Kyrylo Kozlovskyi (G00425385)
-    - Fionn McCarthy (G00414386)
 """
 
 import argparse
@@ -63,9 +65,7 @@ except ImportError:
     sys.exit(1)
 
 
-# -----------------------------------------------------------------------
 # Puzzle config
-# -----------------------------------------------------------------------
 PUZZLE_CONFIG = {
     "sudoku_4x4": {"seq_len": 16, "grid_size": 4, "vocab_size": 5, "type": "sudoku"},
     "sudoku_9x9": {"seq_len": 81, "grid_size": 9, "vocab_size": 10, "type": "sudoku"},
@@ -82,9 +82,7 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 
-# -----------------------------------------------------------------------
 # Sudoku display
-# -----------------------------------------------------------------------
 def format_sudoku_grid(flat, grid_size):
     """Format a flat array as a Sudoku grid string with box lines."""
     grid = flat.reshape(grid_size, grid_size)
@@ -135,9 +133,7 @@ def colour_sudoku_diff(puzzle, prediction, solution, grid_size):
     return "\n".join(lines)
 
 
-# -----------------------------------------------------------------------
 # Maze display
-# -----------------------------------------------------------------------
 _MAZE_TOKENS = {0: "\u2588", 1: " ", 2: "S", 3: "G"}
 
 
@@ -226,9 +222,7 @@ def compute_maze_metrics(prediction, solution):
     }
 
 
-# -----------------------------------------------------------------------
 # Core inference
-# -----------------------------------------------------------------------
 class ONNXSolver:
     """ONNX Runtime solver for SimplifiedHRM."""
 
@@ -293,9 +287,7 @@ class ONNXSolver:
         }
 
 
-# -----------------------------------------------------------------------
 # Modes
-# -----------------------------------------------------------------------
 def demo_random(solver, puzzle_type, grid_size, num_puzzles=3):
     """Generate and solve random puzzles."""
     cfg = PUZZLE_CONFIG[puzzle_type]
@@ -558,9 +550,7 @@ def interactive_mode(solver, puzzle_type, grid_size):
             print("  Invalid input. Use comma-separated integers.")
 
 
-# -----------------------------------------------------------------------
 # CLI
-# -----------------------------------------------------------------------
 def parse_args():
     parser = argparse.ArgumentParser(
         description="ONNX inference & benchmarking for SimplifiedHRM",

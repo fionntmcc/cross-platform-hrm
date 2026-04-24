@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Simplified HRM — L-Module Only (Ge et al. 2025)
 
@@ -87,15 +93,13 @@ from hrm.layers.transformer import (
 )
 
 
-# ---------------------------------------------------------------------------
 # Puzzle type enum (shared with model_unified for compatibility)
-# ---------------------------------------------------------------------------
 class PuzzleType(Enum):
     """Supported puzzle types."""
 
     SUDOKU_4X4 = auto()  # 4x4 grid, vocab=5 (0=empty, 1-4)
     SUDOKU_9X9 = auto()  # 9x9 grid, vocab=10 (0=empty, 1-9)
-    MAZE = auto()  # Variable size, vocab=4
+    MAZE = auto()  # Variable size, input vocab=10 (weighted maze tokens)
 
 
 # Per-puzzle defaults
@@ -110,9 +114,7 @@ PUZZLE_DEFAULTS = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Configuration
-# ---------------------------------------------------------------------------
 @dataclass
 class SimplifiedHRMConfig:
     """
@@ -154,9 +156,7 @@ class SimplifiedHRMConfig:
     use_prediction_feedback: bool = True  # Self-conditioning between steps
 
 
-# ---------------------------------------------------------------------------
 # Main Model
-# ---------------------------------------------------------------------------
 class SimplifiedHRM(nn.Module):
     """
     Simplified HRM — L-Module Only (Ge et al. 2025).
@@ -212,14 +212,10 @@ class SimplifiedHRM(nn.Module):
         self.config = config or SimplifiedHRMConfig()
         cfg = self.config
 
-        # =================================================================
         # Input Embedding (hrm.layers.input_simplified)
-        # =================================================================
         self.input_net = InputEmbedding(cfg)
 
-        # =================================================================
         # RoPE for positional encoding
-        # =================================================================
         head_dim = cfg.hidden_size // cfg.num_heads
         self.rotary_emb = RotaryEmbedding(
             dim=head_dim,
@@ -227,9 +223,7 @@ class SimplifiedHRM(nn.Module):
             base=10000.0,
         )
 
-        # =================================================================
         # L-Module: 8-layer Transformer (the ONLY reasoning module)
-        # =================================================================
         # This single module replaces both the Worker and Planner from
         # the original HRM. Weight sharing: the same 8 transformer layers
         # are applied at every reasoning step (recurrence).
@@ -242,14 +236,10 @@ class SimplifiedHRM(nn.Module):
             causal=False,  # Non-causal for puzzle solving
         )
 
-        # =================================================================
         # Output Head (hrm.layers.output_simplified)
-        # =================================================================
         self.output_head = OutputHead(cfg)
 
-        # =================================================================
         # Initial latent state z_L^0 (non-trainable buffer)
-        # =================================================================
         # Shape: (1, 1, hidden_size) — broadcast to (batch, seq_len, d)
         # Matches model_unified.py which also uses register_buffer for
         # z_L_init and z_H_init (lines 353-364).
@@ -356,9 +346,7 @@ class SimplifiedHRM(nn.Module):
         is_maze = puzzle_type == PuzzleType.MAZE
         given_mask = x != 0  # True for given clues (Sudoku only)
 
-        # =================================================================
         # Step 5: Iterative reasoning with one-step gradient
-        # =================================================================
         # Each step:
         #   1. z_L enters detached (no BPTT across steps)
         #   2. f_L runs WITH gradients (one-step gradient)
@@ -368,7 +356,6 @@ class SimplifiedHRM(nn.Module):
         # Equivalent to LCM training (Ge et al. Section 3.1):
         # the model learns to map each intermediate state to the solution
         # independently, without backpropagating through the chain.
-        # =================================================================
         logits = None
 
         for step in range(n_steps):
@@ -416,12 +403,9 @@ class SimplifiedHRM(nn.Module):
             "reasoning_steps_used": n_steps,
         }
 
-        # =================================================================
         # Step 7: Loss computation — final step only (paper-aligned)
-        # =================================================================
         # The official HRM does NOT use deep supervision for LM loss —
         # it only uses the final outer step's logits for cross-entropy.
-        # =================================================================
         if targets is not None:
             lm_loss = F.cross_entropy(
                 logits.view(-1, logits.size(-1)),
@@ -438,9 +422,7 @@ class SimplifiedHRM(nn.Module):
 
         return output
 
-    # -------------------------------------------------------------------
     # Convenience methods
-    # -------------------------------------------------------------------
     def predict(
         self,
         x: torch.Tensor,
@@ -526,18 +508,14 @@ class SimplifiedHRM(nn.Module):
         )
 
 
-# ---------------------------------------------------------------------------
 # Backward-compatible aliases
-# ---------------------------------------------------------------------------
 # These allow existing code and checkpoints using the old names to keep
 # working without changes to import statements.
 LModuleOnlyHRM = SimplifiedHRM
 LModuleOnlyConfig = SimplifiedHRMConfig
 
 
-# ---------------------------------------------------------------------------
 # Factory functions
-# ---------------------------------------------------------------------------
 def create_simplified_hrm(
     hidden_size: int = 256,
     num_heads: int = 4,

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Pytest configuration and shared fixtures for HRM tests.
 """
@@ -8,36 +14,26 @@ import sys
 from pathlib import Path
 
 # Add hrm to path for all tests
-sys.path.insert(0, str(Path(__file__).parent.parent / 'hrm'))
+sys.path.insert(0, str(Path(__file__).parent.parent / "hrm"))
 
 
 @pytest.fixture(scope="session")
 def device():
     """Provide device for testing"""
-    return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 @pytest.fixture
 def sample_puzzle():
     """Provide a sample 4x4 Sudoku puzzle"""
-    puzzle = np.array([
-        [1, 2, 0, 0],
-        [0, 0, 1, 2],
-        [2, 1, 0, 0],
-        [0, 0, 2, 1]
-    ])
+    puzzle = np.array([[1, 2, 0, 0], [0, 0, 1, 2], [2, 1, 0, 0], [0, 0, 2, 1]])
     return puzzle
 
 
 @pytest.fixture
 def sample_solution():
     """Provide a sample 4x4 Sudoku solution"""
-    solution = np.array([
-        [1, 2, 3, 4],
-        [3, 4, 1, 2],
-        [2, 1, 4, 3],
-        [4, 3, 2, 1]
-    ])
+    solution = np.array([[1, 2, 3, 4], [3, 4, 1, 2], [2, 1, 4, 3], [4, 3, 2, 1]])
     return solution
 
 
@@ -66,6 +62,4 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "gpu: marks tests requiring GPU"
-    )
+    config.addinivalue_line("markers", "gpu: marks tests requiring GPU")

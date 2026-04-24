@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for InputEmbedding (Simplified HRM)
 
@@ -17,9 +23,7 @@ import torch
 from hrm.layers.input_simplified import InputEmbedding
 from hrm.model_simplified import PuzzleType, SimplifiedHRMConfig
 
-# =============================================================================
 # Fixtures
-# =============================================================================
 
 
 @pytest.fixture
@@ -40,9 +44,7 @@ def embed(config):
     return InputEmbedding(config)
 
 
-# =============================================================================
 # Output shape
-# =============================================================================
 
 
 class TestOutputShape:
@@ -69,9 +71,7 @@ class TestOutputShape:
         assert out.shape == (16, 81, config.hidden_size)
 
 
-# =============================================================================
 # All puzzle types supported
-# =============================================================================
 
 
 class TestPuzzleTypes:
@@ -100,9 +100,7 @@ class TestPuzzleTypes:
         assert not torch.allclose(out_4x4, out_9x9)
 
 
-# =============================================================================
 # Gradient flow
-# =============================================================================
 
 
 class TestGradients:
@@ -123,9 +121,7 @@ class TestGradients:
         assert not torch.isinf(out).any()
 
 
-# =============================================================================
 # Architecture
-# =============================================================================
 
 
 class TestArchitecture:

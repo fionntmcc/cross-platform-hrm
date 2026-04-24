@@ -1,7 +1,13 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for Sudoku Validation Utilities
 
-Comprehensive tests covering:
+Tests covering:
     - is_valid_placement: row, column, box constraints
     - is_valid_solution: complete solution validation
     - get_empty_cells: empty cell detection
@@ -10,7 +16,6 @@ Comprehensive tests covering:
     - get_valid_candidates: candidate enumeration
     - Edge cases: empty grids, full grids, invalid inputs, both 4x4 and 9x9
 
-Author: Kyrylo Kozlovskyi (G00425385)
 """
 
 import numpy as np
@@ -26,11 +31,9 @@ from hrm.data.validator import (
     is_valid_solution,
 )
 
-# ===================================================================
 # Test fixtures
-# ===================================================================
 
-# --- 4x4 fixtures ---
+# 4x4 fixtures
 
 VALID_4X4_SOLUTION = [
     [4, 3, 1, 2],
@@ -48,7 +51,7 @@ VALID_4X4_PUZZLE = [
 
 EMPTY_4X4 = [[0] * 4 for _ in range(4)]
 
-# --- 9x9 fixtures ---
+# 9x9 fixtures
 
 VALID_9X9_SOLUTION = [
     [5, 3, 4, 6, 7, 8, 9, 1, 2],
@@ -77,9 +80,7 @@ VALID_9X9_PUZZLE = [
 EMPTY_9X9 = [[0] * 9 for _ in range(9)]
 
 
-# ===================================================================
 # _validate_grid_input
-# ===================================================================
 
 
 class TestValidateGridInput:
@@ -113,9 +114,7 @@ class TestValidateGridInput:
             _validate_grid_input(np.zeros(16, dtype=int))
 
 
-# ===================================================================
 # is_valid_placement - 4x4
-# ===================================================================
 
 
 class TestIsValidPlacement4x4:
@@ -168,9 +167,7 @@ class TestIsValidPlacement4x4:
             is_valid_placement(EMPTY_4X4, 0, 0, 5)
 
 
-# ===================================================================
 # is_valid_placement - 9x9
-# ===================================================================
 
 
 class TestIsValidPlacement9x9:
@@ -207,9 +204,7 @@ class TestIsValidPlacement9x9:
             is_valid_placement(EMPTY_9X9, 0, 0, 10)
 
 
-# ===================================================================
 # is_valid_solution
-# ===================================================================
 
 
 class TestIsValidSolution:
@@ -274,9 +269,7 @@ class TestIsValidSolution:
         assert is_valid_solution(arr) is True
 
 
-# ===================================================================
 # get_empty_cells
-# ===================================================================
 
 
 class TestGetEmptyCells:
@@ -319,9 +312,7 @@ class TestGetEmptyCells:
         assert all(isinstance(e, tuple) and len(e) == 2 for e in empties)
 
 
-# ===================================================================
 # is_valid_puzzle (partial grid)
-# ===================================================================
 
 
 class TestIsValidPuzzle:
@@ -361,9 +352,7 @@ class TestIsValidPuzzle:
         assert is_valid_puzzle(bad) is False
 
 
-# ===================================================================
 # count_filled_cells
-# ===================================================================
 
 
 class TestCountFilledCells:
@@ -383,9 +372,7 @@ class TestCountFilledCells:
         assert count_filled_cells(VALID_4X4_PUZZLE) == filled
 
 
-# ===================================================================
 # get_valid_candidates
-# ===================================================================
 
 
 class TestGetValidCandidates:
@@ -430,9 +417,7 @@ class TestGetValidCandidates:
             assert is_valid_placement(grid, 0, 2, num) is True
 
 
-# ===================================================================
 # Integration: validator + generator consistency
-# ===================================================================
 
 
 class TestIntegrationConsistency:

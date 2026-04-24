@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Multi-seed result aggregation and comparison plots.
 
@@ -26,9 +32,7 @@ from typing import Any
 
 import numpy as np
 
-# =========================================================================
 # Aggregation
-# =========================================================================
 
 
 def _load_history(path: Path) -> dict[str, list]:
@@ -73,7 +77,7 @@ def aggregate_seeds(
     all_keys: set[str] = set()
     for hist in per_seed.values():
         for k, v in hist.items():
-            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], (int, float)):
+            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], int | float):
                 all_keys.add(k)
 
     # Align to the shortest run length (in case a seed stopped early)
@@ -123,9 +127,7 @@ def aggregate_seeds(
     }
 
 
-# =========================================================================
 # Reporting
-# =========================================================================
 
 
 def print_summary(summary: dict[str, Any]) -> str:
@@ -184,9 +186,7 @@ def print_summary(summary: dict[str, Any]) -> str:
     return text
 
 
-# =========================================================================
 # Plotting
-# =========================================================================
 
 
 def plot_seed_comparison(
@@ -230,7 +230,7 @@ def plot_seed_comparison(
     # Colour palette for seeds
     colours = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
-    # --- Panel 1: Loss ---
+    # Panel 1: Loss
     ax = axes[0, 0]
     for i, seed in enumerate(seeds):
         if "val_loss" in metrics:
@@ -259,7 +259,7 @@ def plot_seed_comparison(
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
 
-    # --- Panel 2: Token Accuracy ---
+    # Panel 2: Token Accuracy
     ax = axes[0, 1]
     for i, seed in enumerate(seeds):
         if "val_token_accuracy" in metrics:
@@ -289,7 +289,7 @@ def plot_seed_comparison(
     ax.grid(True, alpha=0.3)
     ax.set_ylim(0, 1.05)
 
-    # --- Panel 3: Puzzle Accuracy ---
+    # Panel 3: Puzzle Accuracy
     ax = axes[1, 0]
     for i, seed in enumerate(seeds):
         if "val_puzzle_accuracy" in metrics:
@@ -319,7 +319,7 @@ def plot_seed_comparison(
     ax.grid(True, alpha=0.3)
     ax.set_ylim(0, 1.05)
 
-    # --- Panel 4: Final-epoch bar chart with error bars ---
+    # Panel 4: Final-epoch bar chart with error bars
     ax = axes[1, 1]
     bar_keys = ["val_puzzle_accuracy", "val_token_accuracy", "train_accuracy"]
     bar_keys = [k for k in bar_keys if k in summary["final"]]
@@ -367,9 +367,7 @@ def plot_seed_comparison(
     return out_path
 
 
-# =========================================================================
 # Save summary JSON
-# =========================================================================
 
 
 def save_summary(
@@ -407,9 +405,7 @@ def save_summary(
     return out_path
 
 
-# =========================================================================
 # CLI entry point
-# =========================================================================
 
 
 def main() -> None:

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for hrm.training.logger
 
@@ -19,9 +25,7 @@ import pytest
 
 from hrm.training.logger import TrainingLogger, _try_import_matplotlib
 
-# =========================================================================
 # Fixtures
-# =========================================================================
 
 
 @pytest.fixture()
@@ -57,9 +61,7 @@ def sample_val_metrics():
     }
 
 
-# =========================================================================
 # Initialisation
-# =========================================================================
 
 
 class TestLoggerInit:
@@ -91,9 +93,7 @@ class TestLoggerInit:
         logger.close()
 
 
-# =========================================================================
 # JSONL writing
-# =========================================================================
 
 
 class TestJSONLWriting:
@@ -137,9 +137,7 @@ class TestJSONLWriting:
         assert "train_batch_losses" not in record
 
 
-# =========================================================================
 # CSV writing
-# =========================================================================
 
 
 class TestCSVWriting:
@@ -177,9 +175,7 @@ class TestCSVWriting:
         assert float(rows[0]["train_loss"]) == pytest.approx(0.45)
 
 
-# =========================================================================
 # Record building
-# =========================================================================
 
 
 class TestBuildRecord:
@@ -214,9 +210,7 @@ class TestBuildRecord:
         assert "train_nested" not in record
 
 
-# =========================================================================
 # Export history JSON
-# =========================================================================
 
 
 class TestExportHistoryJSON:
@@ -256,9 +250,7 @@ class TestExportHistoryJSON:
         assert custom.exists()
 
 
-# =========================================================================
 # Plot generation
-# =========================================================================
 
 
 class TestPlotGeneration:
@@ -311,9 +303,7 @@ class TestPlotGeneration:
         assert path is not None
 
 
-# =========================================================================
 # Context manager
-# =========================================================================
 
 
 class TestContextManager:
@@ -330,9 +320,7 @@ class TestContextManager:
         assert logger._csv_file.closed
 
 
-# =========================================================================
 # log_epoch return value
-# =========================================================================
 
 
 class TestLogEpochReturn:
@@ -350,9 +338,7 @@ class TestLogEpochReturn:
             assert len(logger._history) == 2
 
 
-# =========================================================================
 # TensorBoard disabled path
-# =========================================================================
 
 
 class TestTensorBoardDisabled:

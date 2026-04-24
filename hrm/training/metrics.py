@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Metrics tracking for Simplified HRM training.
 
@@ -25,9 +31,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-# =========================================================================
 # Accuracy helpers
-# =========================================================================
 
 
 def compute_accuracy(
@@ -81,9 +85,7 @@ def compute_puzzle_accuracy(
         return per_puzzle.float().mean().item()
 
 
-# =========================================================================
 # Residual / convergence helpers
-# =========================================================================
 
 
 def compute_residuals(
@@ -116,9 +118,7 @@ def compute_residuals(
     return residuals
 
 
-# =========================================================================
 # MetricsTracker — per-epoch accumulator
-# =========================================================================
 
 
 @dataclass
@@ -161,9 +161,7 @@ class MetricsTracker:
         self._batch_residuals: list[list[float]] = []
         self._start_time: float = time.monotonic()
 
-    # -----------------------------------------------------------------
     # Per-batch update
-    # -----------------------------------------------------------------
 
     def update(
         self,
@@ -215,9 +213,7 @@ class MetricsTracker:
                 a.final_residual += residuals[-1] * batch_size
                 a.residual_count += batch_size
 
-    # -----------------------------------------------------------------
     # Epoch summary
-    # -----------------------------------------------------------------
 
     def summarise(
         self,
@@ -268,9 +264,7 @@ class MetricsTracker:
     summarize = summarise
 
 
-# =========================================================================
 # Standalone evaluation helper
-# =========================================================================
 
 
 @torch.no_grad()

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Hierarchical Outer Loop for HRM (Planner Cycles)
 
@@ -49,10 +55,10 @@ from hrm.prototype.core.iteration import (
 class OuterLoopStats:
     """
     Statistics from hierarchical outer loop.
-    
+
     Tracks convergence information across all cycles, useful for
     monitoring training progress and debugging the hierarchical mechanism.
-    
+
     Attributes:
         num_cycles: Number of outer cycles completed.
         total_inner_steps: Total Worker iterations across all cycles (K × T).
@@ -61,14 +67,14 @@ class OuterLoopStats:
         cycle_stats: List of IterationStats from each inner loop.
         h_H_residual_history: List of h_H residuals at each cycle.
     """
-    
+
     num_cycles: int
     total_inner_steps: int
     converged: bool
     final_h_H_residual: float
     cycle_stats: List[IterationStats] = field(default_factory=list)
     h_H_residual_history: List[float] = field(default_factory=list)
-    
+
     def __repr__(self) -> str:
         return (
             f"OuterLoopStats(cycles={self.num_cycles}, "
@@ -76,23 +82,23 @@ class OuterLoopStats:
             f"converged={self.converged}, "
             f"final_h_H_residual={self.final_h_H_residual:.6f})"
         )
-    
+
     @property
     def average_inner_steps_per_cycle(self) -> float:
         """
         Compute average inner steps per cycle.
-        
+
         Returns average Worker iterations per Planner update.
         """
         if self.num_cycles == 0:
             return 0.0
         return self.total_inner_steps / self.num_cycles
-    
+
     @property
     def convergence_rate(self) -> Optional[float]:
         """
         Compute average convergence rate from h_H residual history.
-        
+
         Returns ratio of final to initial h_H residual, or None if history
         has fewer than 2 entries.
         """
@@ -101,18 +107,15 @@ class OuterLoopStats:
         if self.h_H_residual_history[0] == 0:
             return 0.0
         return self.h_H_residual_history[-1] / self.h_H_residual_history[0]
-    
+
     @property
     def inner_convergence_rate(self) -> Optional[float]:
         """
         Compute average inner loop convergence rate across cycles.
-        
+
         Returns average of each cycle's convergence rate.
         """
-        rates = [
-            s.convergence_rate for s in self.cycle_stats 
-            if s.convergence_rate is not None
-        ]
+        rates = [s.convergence_rate for s in self.cycle_stats if s.convergence_rate is not None]
         if not rates:
             return None
         return sum(rates) / len(rates)
@@ -133,27 +136,27 @@ def hierarchical_iteration(
 ) -> Tuple[torch.Tensor, torch.Tensor, OuterLoopStats]:
     """
     Run hierarchical iteration with Planner and Worker modules.
-    
+
     This implements the outer loop of HRM where:
     1. Worker iterates to convergence (inner loop) with fixed h_H
     2. Planner updates h_H using the converged h_L
     3. Repeat for K outer cycles
-    
+
     Algorithm:
         for cycle in range(n_outer_cycles):
             # Inner loop: Worker refines h_L with h_H FIXED
             h_L, inner_stats = fixed_point_iteration(
                 worker, h_L, h_H, x_in, n_inner_steps
             )
-            
+
             # Planner update: new h_H from converged h_L
             h_H_prev = h_H
             h_H = planner(h_H_prev, h_L)
-            
+
             # Check outer convergence
             if ||h_H - h_H_prev|| < outer_threshold:
                 break
-    
+
     Args:
         worker: WorkerModule instance for inner loop refinement.
         planner: PlannerModule instance for outer loop updates.
@@ -168,7 +171,7 @@ def hierarchical_iteration(
             stopping based on h_H change. If None, always runs n_outer_cycles.
         norm_type: Norm type for residual computation. Default: "l2".
         track_history: Whether to track residual history. Default: True.
-    
+
     Returns:
         Tuple of (h_L_final, h_H_final, stats):
             - h_L_final: Final low-level hidden state (batch, hidden_dim).
@@ -180,7 +183,7 @@ def hierarchical_iteration(
         - h_H is DETACHED in inner loop (one-step gradient approximation)
         - Gradients flow through final iteration of each cycle
         - Memory complexity is O(K) instead of O(K × T)
-    
+
     Example:
         >>> worker = WorkerModule(hidden_dim=64)
         >>> planner = PlannerModule(hidden_dim=64)
@@ -203,15 +206,13 @@ def hierarchical_iteration(
         raise ValueError(f"n_inner_steps must be positive, got {n_inner_steps}")
     if inner_convergence_threshold is not None and inner_convergence_threshold <= 0:
         raise ValueError(
-            f"inner_convergence_threshold must be positive, "
-            f"got {inner_convergence_threshold}"
+            f"inner_convergence_threshold must be positive, " f"got {inner_convergence_threshold}"
         )
     if outer_convergence_threshold is not None and outer_convergence_threshold <= 0:
         raise ValueError(
-            f"outer_convergence_threshold must be positive, "
-            f"got {outer_convergence_threshold}"
+            f"outer_convergence_threshold must be positive, " f"got {outer_convergence_threshold}"
         )
-    
+
     # Initialise iteration state
     h_L = h_L_init
     h_H = h_H_init
@@ -221,17 +222,13 @@ def hierarchical_iteration(
     converged = False
     final_h_H_residual = 0.0
     cycles_completed = 0
-    
-    # ==========================================================================
+
     # Hierarchical outer loop (K cycles)
-    # ==========================================================================
     for cycle in range(n_outer_cycles):
         # Store previous h_H for convergence check
         h_H_prev = h_H
-        
-        # ======================================================================
+
         # Inner loop: Worker refines h_L with FIXED h_H
-        # ======================================================================
         # Note: fixed_point_iteration handles h_H detachment internally
         h_L, inner_stats = fixed_point_iteration(
             worker=worker,
@@ -243,36 +240,34 @@ def hierarchical_iteration(
             norm_type=norm_type,
             track_history=track_history,
         )
-        
+
         # Track inner loop statistics
         total_inner_steps += inner_stats.num_steps
         if track_history:
             cycle_stats.append(inner_stats)
-        
-        # ======================================================================
+
         # Planner update: new h_H from converged h_L
-        # ======================================================================
         # Planner receives: previous h_H state and converged h_L
         h_H = planner(h_H_prev, h_L)
-        
+
         # Compute h_H residual: ||h_H^(k) - h_H^(k-1)||
         h_H_residual = compute_residual(h_H, h_H_prev, norm_type=norm_type)
         mean_h_H_residual = h_H_residual.mean().item()
         final_h_H_residual = mean_h_H_residual
         cycles_completed = cycle + 1
-        
+
         # Track h_H residual history
         if track_history:
             h_H_residual_history.append(mean_h_H_residual)
-        
-        # ======================================================================
+
         # Outer convergence check
-        # ======================================================================
-        if (outer_convergence_threshold is not None and 
-                mean_h_H_residual < outer_convergence_threshold):
+        if (
+            outer_convergence_threshold is not None
+            and mean_h_H_residual < outer_convergence_threshold
+        ):
             converged = True
             break
-    
+
     # Build statistics
     stats = OuterLoopStats(
         num_cycles=cycles_completed,
@@ -282,24 +277,24 @@ def hierarchical_iteration(
         cycle_stats=cycle_stats if track_history else [],
         h_H_residual_history=h_H_residual_history if track_history else [],
     )
-    
+
     return h_L, h_H, stats
 
 
 class HierarchicalIterator(nn.Module):
     """
     Module wrapper for hierarchical iteration.
-    
+
     Provides a nn.Module interface for the hierarchical outer loop,
     making it easier to integrate into larger models and handle
     training/eval mode switching.
-    
+
     The iterator manages:
     - Outer loop (Planner updates)
     - Inner loop (Worker refinement via FixedPointIterator)
     - Convergence tracking at both levels
     - Statistics collection
-    
+
     Args:
         worker: WorkerModule for low-level refinement.
         planner: PlannerModule for high-level planning.
@@ -309,7 +304,7 @@ class HierarchicalIterator(nn.Module):
         outer_convergence_threshold: Outer loop early stopping threshold.
         norm_type: Norm type for residual computation. Default: "l2".
         track_history: Whether to track residual history. Default: True.
-    
+
     Example:
         >>> worker = WorkerModule(hidden_dim=64)
         >>> planner = PlannerModule(hidden_dim=64)
@@ -320,7 +315,7 @@ class HierarchicalIterator(nn.Module):
         ... )
         >>> h_L_final, h_H_final, stats = iterator(h_L_init, h_H_init, x_in)
     """
-    
+
     def __init__(
         self,
         worker: nn.Module,
@@ -334,7 +329,7 @@ class HierarchicalIterator(nn.Module):
     ):
         """
         Initialise HierarchicalIterator.
-        
+
         Args:
             worker: WorkerModule for low-level refinement.
             planner: PlannerModule for high-level planning.
@@ -346,7 +341,7 @@ class HierarchicalIterator(nn.Module):
             track_history: Whether to record residual history.
         """
         super().__init__()
-        
+
         if n_outer_cycles <= 0:
             raise ValueError(f"n_outer_cycles must be positive, got {n_outer_cycles}")
         if n_inner_steps <= 0:
@@ -361,7 +356,7 @@ class HierarchicalIterator(nn.Module):
                 f"outer_convergence_threshold must be positive, "
                 f"got {outer_convergence_threshold}"
             )
-        
+
         self.worker = worker
         self.planner = planner
         self.n_outer_cycles = n_outer_cycles
@@ -370,7 +365,7 @@ class HierarchicalIterator(nn.Module):
         self.outer_convergence_threshold = outer_convergence_threshold
         self.norm_type = norm_type
         self.track_history = track_history
-    
+
     def forward(
         self,
         h_L_init: torch.Tensor,
@@ -383,7 +378,7 @@ class HierarchicalIterator(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor, OuterLoopStats]:
         """
         Run hierarchical iteration.
-        
+
         Args:
             h_L_init: Initial low-level hidden state (batch, hidden_dim).
             h_H_init: Initial high-level hidden state (batch, hidden_dim).
@@ -392,7 +387,7 @@ class HierarchicalIterator(nn.Module):
             n_inner_steps: Override default inner steps (optional).
             inner_convergence_threshold: Override inner threshold (optional).
             outer_convergence_threshold: Override outer threshold (optional).
-        
+
         Returns:
             Tuple of (h_L_final, h_H_final, stats):
                 - h_L_final: Converged low-level state (batch, hidden_dim).
@@ -400,25 +395,19 @@ class HierarchicalIterator(nn.Module):
                 - stats: OuterLoopStats with convergence info.
         """
         # Use provided values or fall back to defaults
-        actual_outer_cycles = (
-            n_outer_cycles if n_outer_cycles is not None 
-            else self.n_outer_cycles
-        )
-        actual_inner_steps = (
-            n_inner_steps if n_inner_steps is not None 
-            else self.n_inner_steps
-        )
+        actual_outer_cycles = n_outer_cycles if n_outer_cycles is not None else self.n_outer_cycles
+        actual_inner_steps = n_inner_steps if n_inner_steps is not None else self.n_inner_steps
         actual_inner_threshold = (
-            inner_convergence_threshold 
-            if inner_convergence_threshold is not None 
+            inner_convergence_threshold
+            if inner_convergence_threshold is not None
             else self.inner_convergence_threshold
         )
         actual_outer_threshold = (
-            outer_convergence_threshold 
-            if outer_convergence_threshold is not None 
+            outer_convergence_threshold
+            if outer_convergence_threshold is not None
             else self.outer_convergence_threshold
         )
-        
+
         return hierarchical_iteration(
             worker=self.worker,
             planner=self.planner,
@@ -432,7 +421,7 @@ class HierarchicalIterator(nn.Module):
             norm_type=self.norm_type,
             track_history=self.track_history,
         )
-    
+
     def extra_repr(self) -> str:
         """Return string representation of module configuration."""
         return (
@@ -458,10 +447,10 @@ def hierarchical_iterate_to_convergence(
 ) -> Tuple[torch.Tensor, torch.Tensor, int, int, bool]:
     """
     Simplified hierarchical iteration that runs until convergence.
-    
+
     A convenience wrapper that always uses early stopping and returns
     a simpler output format without full statistics.
-    
+
     Args:
         worker: WorkerModule for h_L updates.
         planner: PlannerModule for h_H updates.
@@ -473,7 +462,7 @@ def hierarchical_iterate_to_convergence(
         inner_threshold: Inner loop convergence threshold. Default: 1e-5.
         outer_threshold: Outer loop convergence threshold. Default: 1e-4.
         norm_type: Norm for residual. Default: "l2".
-    
+
     Returns:
         Tuple of (h_L_final, h_H_final, cycles, total_steps, converged):
             - h_L_final: Final h_L state
@@ -481,7 +470,7 @@ def hierarchical_iterate_to_convergence(
             - cycles: Number of outer cycles completed
             - total_steps: Total inner steps across all cycles
             - converged: Whether outer threshold was reached
-    
+
     Example:
         >>> h_L, h_H, cycles, steps, converged = hierarchical_iterate_to_convergence(
         ...     worker, planner, h_L, h_H, x_in,
@@ -502,7 +491,7 @@ def hierarchical_iterate_to_convergence(
         norm_type=norm_type,
         track_history=False,  # Skip history for efficiency
     )
-    
+
     return (
         h_L_final,
         h_H_final,
@@ -524,15 +513,15 @@ def single_hierarchical_step(
 ) -> Tuple[torch.Tensor, torch.Tensor, IterationStats]:
     """
     Execute a single hierarchical step (one outer cycle).
-    
+
     Useful for manual control over the outer loop, allowing custom
     logic between Planner updates.
-    
+
     Algorithm:
         1. Run inner loop (Worker refinement with fixed h_H)
         2. Update Planner (h_H_new from h_H and converged h_L)
         3. Return updated states and inner loop stats
-    
+
     Args:
         worker: WorkerModule for h_L refinement.
         planner: PlannerModule for h_H update.
@@ -542,13 +531,13 @@ def single_hierarchical_step(
         n_inner_steps: Maximum inner loop steps. Default: 10.
         inner_convergence_threshold: Inner loop early stopping threshold.
         norm_type: Norm for residual computation. Default: "l2".
-    
+
     Returns:
         Tuple of (h_L_new, h_H_new, inner_stats):
             - h_L_new: Converged low-level state after inner loop.
             - h_H_new: Updated high-level state after Planner update.
             - inner_stats: IterationStats from the inner loop.
-    
+
     Example:
         >>> # Manual outer loop with custom logic
         >>> for cycle in range(10):
@@ -570,8 +559,8 @@ def single_hierarchical_step(
         norm_type=norm_type,
         track_history=True,
     )
-    
+
     # Planner update: new h_H from converged h_L
     h_H_new = planner(h_H, h_L_converged)
-    
+
     return h_L_converged, h_H_new, inner_stats

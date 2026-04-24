@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 SudokuDataset: PyTorch Dataset for HRM Training and Validation
 
@@ -7,10 +13,6 @@ digit for that cell, and the full solution for reference.
 
 Supports on-the-fly generation and pre-generated caching for reproducible
 experiments. Difficulty filtering allows curriculum-style training.
-
-Authors:
-    - Kyrylo Kozlovskyi (G00425385)
-    - Fionn McCarthy (G00414386)
 
 Reference:
     - HRM_4x4_Simple (model_simple.py): L-Module Only Variant
@@ -113,9 +115,7 @@ class SudokuDataset(Dataset):
         if cache:
             self._build_cache()
 
-    # ------------------------------------------------------------------
     # Cache management
-    # ------------------------------------------------------------------
 
     def _build_cache(self) -> None:
         """Pre-generate all puzzles and store them in memory."""
@@ -150,9 +150,7 @@ class SudokuDataset(Dataset):
         # Mixed: cycle through difficulties deterministically
         return self._difficulties[index % len(self._difficulties)]
 
-    # ------------------------------------------------------------------
     # Dataset protocol
-    # ------------------------------------------------------------------
 
     def __len__(self) -> int:
         return self.num_puzzles
@@ -186,7 +184,7 @@ class SudokuDataset(Dataset):
             solution_np = np.array(solution_list, dtype=np.int64)
             difficulty_str = diff_enum.value
 
-        # --- pick a random empty cell as the prediction target ---
+        # pick a random empty cell as the prediction target
         empty_mask = puzzle_np == 0
         empty_indices = np.argwhere(empty_mask)  # shape (N, 2)
 
@@ -214,9 +212,7 @@ class SudokuDataset(Dataset):
 
         return sample
 
-    # ------------------------------------------------------------------
     # Batch generation helper
-    # ------------------------------------------------------------------
 
     def generate_batch(
         self,
@@ -281,9 +277,7 @@ class SudokuDataset(Dataset):
             "difficulties": difficulties,
         }
 
-    # ------------------------------------------------------------------
     # Convenience helpers
-    # ------------------------------------------------------------------
 
     def get_difficulty_subset(self, difficulty: str) -> list[int]:
         """

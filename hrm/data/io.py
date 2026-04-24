@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Dataset I/O utilities for saving and loading puzzle datasets in JSON/CSV formats.
 
@@ -13,15 +19,14 @@ Usage:
 
 import csv
 import json
+from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 
 def save_dataset(
@@ -115,9 +120,7 @@ def load_dataset(path: str | Path) -> dict[str, Any]:
     raise ValueError(f"Cannot auto-detect format for extension {ext!r}. Use .json or .csv.")
 
 
-# ---------------------------------------------------------------------------
 # JSON helpers
-# ---------------------------------------------------------------------------
 
 
 def _write_json(
@@ -162,9 +165,7 @@ def _read_json(path: Path) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
 # CSV helpers
-# ---------------------------------------------------------------------------
 
 _CSV_META_PREFIX = "# "
 
@@ -208,10 +209,8 @@ def _read_csv(path: Path) -> dict[str, Any]:
     # Parse file-level metadata from comment header
     file_metadata: dict[str, Any] = {}
     if first_line.startswith(_CSV_META_PREFIX):
-        try:
+        with suppress(json.JSONDecodeError):
             file_metadata = json.loads(first_line[len(_CSV_META_PREFIX) :])
-        except json.JSONDecodeError:
-            pass
 
     grid_size = int(file_metadata.get("grid_size", 0))
 
@@ -257,9 +256,7 @@ def _read_csv(path: Path) -> dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
 # Internal helpers
-# ---------------------------------------------------------------------------
 
 
 def _normalise_path(path: str | Path, fmt: str) -> Path:
@@ -289,11 +286,11 @@ def _serialisable(obj: Any) -> Any:
     """Convert numpy / tuple types so ``json.dump`` succeeds."""
     if isinstance(obj, dict):
         return {k: _serialisable(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         return [_serialisable(v) for v in obj]
-    if isinstance(obj, (np.integer,)):
+    if isinstance(obj, np.integer):
         return int(obj)
-    if isinstance(obj, (np.floating,)):
+    if isinstance(obj, np.floating):
         return float(obj)
     if isinstance(obj, np.ndarray):
         return obj.tolist()

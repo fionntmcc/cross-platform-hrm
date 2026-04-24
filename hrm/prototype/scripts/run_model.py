@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Run trained Unified HRM on Sudoku puzzles.
 
@@ -23,6 +29,7 @@ from hrm.model_unified import UnifiedHRM, PuzzleType
 
 
 # ── Pretty-printing ──────────────────────────────────────────────────────────
+
 
 def fmt_cell(val, given, correct):
     """Format a single cell: given=bold, correct=green, wrong=red."""
@@ -72,9 +79,10 @@ def print_4x4(grid, given_mask=None, solution=None, title=""):
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
+
 def validate_sudoku(sol, size):
     expected = set(range(1, size + 1))
-    box = int(size ** 0.5)
+    box = int(size**0.5)
     for i in range(size):
         if set(int(x) for x in sol[i]) != expected:
             return False
@@ -82,7 +90,7 @@ def validate_sudoku(sol, size):
             return False
     for bi in range(box):
         for bj in range(box):
-            block = sol[bi*box:(bi+1)*box, bj*box:(bj+1)*box]
+            block = sol[bi * box : (bi + 1) * box, bj * box : (bj + 1) * box]
             if set(int(x) for x in block.flatten()) != expected:
                 return False
     return True
@@ -90,18 +98,30 @@ def validate_sudoku(sol, size):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Run trained HRM on Sudoku puzzles")
-    parser.add_argument("--model", type=str, default="model/unified_hrm_sudoku_9x9_best.pt",
-                        help="Path to checkpoint")
-    parser.add_argument("--puzzle", type=str, default="sudoku_9x9",
-                        choices=["sudoku_4x4", "sudoku_9x9"])
-    parser.add_argument("--data", type=str, default=None,
-                        help="Path to .npz data file (auto-detected if omitted)")
-    parser.add_argument("--num-examples", type=int, default=5,
-                        help="Number of example puzzles to display")
-    parser.add_argument("--eval-count", type=int, default=200,
-                        help="Number of puzzles to evaluate for accuracy stats")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="model/unified_hrm_sudoku_9x9_best.pt",
+        help="Path to checkpoint",
+    )
+    parser.add_argument(
+        "--puzzle", type=str, default="sudoku_9x9", choices=["sudoku_4x4", "sudoku_9x9"]
+    )
+    parser.add_argument(
+        "--data", type=str, default=None, help="Path to .npz data file (auto-detected if omitted)"
+    )
+    parser.add_argument(
+        "--num-examples", type=int, default=5, help="Number of example puzzles to display"
+    )
+    parser.add_argument(
+        "--eval-count",
+        type=int,
+        default=200,
+        help="Number of puzzles to evaluate for accuracy stats",
+    )
     parser.add_argument("--device", type=str, default="auto")
     args = parser.parse_args()
 
@@ -122,6 +142,7 @@ def main():
     config = checkpoint.get("config")
     if config is None:
         from hrm.model_unified import UnifiedHRMConfig
+
         config = UnifiedHRMConfig()
 
     model = UnifiedHRM(config).to(device)
@@ -169,14 +190,19 @@ def main():
         with torch.no_grad():
             for start in range(0, n_eval, batch_size):
                 end = min(start + batch_size, n_eval)
-                batch = torch.from_numpy(eval_puzzles[start:end]).long().view(end - start, -1).to(device)
+                batch = (
+                    torch.from_numpy(eval_puzzles[start:end])
+                    .long()
+                    .view(end - start, -1)
+                    .to(device)
+                )
                 out = model.forward(batch, puzzle_type)
                 preds = out["predictions"].cpu().numpy().reshape(-1, grid_size, grid_size)
                 all_preds.append(preds)
         all_preds = np.concatenate(all_preds, axis=0)
 
         # Metrics
-        empty_masks = (eval_puzzles == 0)
+        empty_masks = eval_puzzles == 0
         token_correct = (all_preds == eval_solutions) & empty_masks
         total_empty = empty_masks.sum()
         token_acc = token_correct.sum() / total_empty if total_empty > 0 else 0
@@ -194,25 +220,41 @@ def main():
         print(f"  EVALUATION RESULTS  ({n_eval} puzzles)")
         print(f"{'='*50}")
         print(f"  Token accuracy (empty cells) : {token_acc:.1%}")
-        print(f"  Puzzle accuracy (all correct): {puzzle_correct}/{n_eval}  ({puzzle_correct/n_eval:.1%})")
-        print(f"  Valid Sudoku solutions       : {valid_solutions}/{n_eval}  ({valid_solutions/n_eval:.1%})")
+        print(
+            f"  Puzzle accuracy (all correct): {puzzle_correct}/{n_eval}  ({puzzle_correct/n_eval:.1%})"
+        )
+        print(
+            f"  Valid Sudoku solutions       : {valid_solutions}/{n_eval}  ({valid_solutions/n_eval:.1%})"
+        )
         print(f"{'='*50}")
 
     # ── Display examples ──────────────────────────────────────────────────
     n_show = args.num_examples
     if puzzles is not None:
         # Pick random examples from eval set
-        show_idx = np.random.choice(len(eval_puzzles), size=min(n_show, len(eval_puzzles)), replace=False)
+        show_idx = np.random.choice(
+            len(eval_puzzles), size=min(n_show, len(eval_puzzles)), replace=False
+        )
         show_puzzles = eval_puzzles[show_idx]
         show_solutions = eval_solutions[show_idx]
         show_preds = all_preds[show_idx]
     else:
         # Hardcoded fallback
-        show_puzzles = [np.array([
-            [5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],
-            [8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],
-            [0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9],
-        ])]
+        show_puzzles = [
+            np.array(
+                [
+                    [5, 3, 0, 0, 7, 0, 0, 0, 0],
+                    [6, 0, 0, 1, 9, 5, 0, 0, 0],
+                    [0, 9, 8, 0, 0, 0, 0, 6, 0],
+                    [8, 0, 0, 0, 6, 0, 0, 0, 3],
+                    [4, 0, 0, 8, 0, 3, 0, 0, 1],
+                    [7, 0, 0, 0, 2, 0, 0, 0, 6],
+                    [0, 6, 0, 0, 0, 0, 2, 8, 0],
+                    [0, 0, 0, 4, 1, 9, 0, 0, 5],
+                    [0, 0, 0, 0, 8, 0, 0, 7, 9],
+                ]
+            )
+        ]
         show_solutions = None
         show_preds = []
         with torch.no_grad():
@@ -225,13 +267,15 @@ def main():
 
     print(f"\n{'='*50}")
     print(f"  EXAMPLE SOLUTIONS")
-    print(f"  Legend: \033[1mbold\033[0m=given  \033[92mgreen\033[0m=correct  \033[91mred\033[0m=wrong")
+    print(
+        f"  Legend: \033[1mbold\033[0m=given  \033[92mgreen\033[0m=correct  \033[91mred\033[0m=wrong"
+    )
     print(f"{'='*50}")
 
     for i in range(min(n_show, len(show_puzzles))):
         puzzle_np = show_puzzles[i]
         pred_np = show_preds[i]
-        given_mask = (puzzle_np != 0)
+        given_mask = puzzle_np != 0
         # Merge givens into prediction display
         display = pred_np.copy()
         display[given_mask] = puzzle_np[given_mask]
@@ -242,13 +286,13 @@ def main():
         n_correct = ((display == sol_np) & empty_mask).sum() if sol_np is not None else "?"
         is_valid = validate_sudoku(display, grid_size)
 
-        print(f"\n  ── Puzzle {i+1} ({'valid ✓' if is_valid else 'invalid ✗'}) "
-              f"— {n_correct}/{n_empty} empty cells correct ──")
-        print_grid(display, given_mask=given_mask, solution=sol_np,
-                   title="Model prediction:")
+        print(
+            f"\n  ── Puzzle {i+1} ({'valid ✓' if is_valid else 'invalid ✗'}) "
+            f"— {n_correct}/{n_empty} empty cells correct ──"
+        )
+        print_grid(display, given_mask=given_mask, solution=sol_np, title="Model prediction:")
         if sol_np is not None:
-            print_grid(sol_np, given_mask=given_mask, solution=sol_np,
-                       title="Ground truth:")
+            print_grid(sol_np, given_mask=given_mask, solution=sol_np, title="Ground truth:")
 
 
 if __name__ == "__main__":

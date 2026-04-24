@@ -1,15 +1,14 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Cross-Platform Hierarchical Reasoning Model (HRM)
 
 A platform-agnostic implementation of the Hierarchical Reasoning Model
 for constraint-satisfaction problems, specifically Sudoku puzzle solving.
-
-Authors:
-    - Fionn McCarthy (G00414386)
-    - Kyrylo Kozlovskyi (G00425385)
-
-Supervisor: Dr. John Healy
-Atlantic Technological University
 
 Active model: SimplifiedHRM (L-Module Only, Ge et al. 2025)
     - hrm.model_simplified — SimplifiedHRM, SimplifiedHRMConfig, PuzzleType

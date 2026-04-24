@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Structured logging for Simplified HRM training.
 
@@ -28,9 +34,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-# =========================================================================
 # Soft imports
-# =========================================================================
 
 
 def _try_import_tensorboard():
@@ -56,9 +60,7 @@ def _try_import_matplotlib():
         return None
 
 
-# =========================================================================
 # TrainingLogger
-# =========================================================================
 
 
 class TrainingLogger:
@@ -113,9 +115,7 @@ class TrainingLogger:
         # In-memory history (for plotting)
         self._history: list[dict[str, Any]] = []
 
-    # -----------------------------------------------------------------
     # Core logging
-    # -----------------------------------------------------------------
 
     def log_epoch(
         self,
@@ -140,9 +140,7 @@ class TrainingLogger:
         self._history.append(record)
         return record
 
-    # -----------------------------------------------------------------
     # Plotting
-    # -----------------------------------------------------------------
 
     def plot_training_curves(
         self,
@@ -170,7 +168,7 @@ class TrainingLogger:
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
         fig.suptitle(f"Training Curves — {self.run_name}", fontsize=14)
 
-        # --- Loss ---
+        # Loss
         ax = axes[0, 0]
         train_loss = [r.get("train_loss") for r in self._history]
         val_loss = [r.get("val_loss") for r in self._history]
@@ -184,7 +182,7 @@ class TrainingLogger:
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # --- Token Accuracy ---
+        # Token Accuracy
         ax = axes[0, 1]
         train_acc = [r.get("train_token_accuracy") for r in self._history]
         val_acc = [r.get("val_token_accuracy") for r in self._history]
@@ -199,7 +197,7 @@ class TrainingLogger:
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.05)
 
-        # --- Puzzle Accuracy ---
+        # Puzzle Accuracy
         ax = axes[1, 0]
         val_puzzle = [r.get("val_puzzle_accuracy") for r in self._history]
         if any(v is not None for v in val_puzzle):
@@ -211,7 +209,7 @@ class TrainingLogger:
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.05)
 
-        # --- Residual / Learning Rate ---
+        # Residual / Learning Rate
         ax = axes[1, 1]
         residuals = [r.get("train_avg_residual") for r in self._history]
         lr_vals = [r.get("learning_rate") for r in self._history]
@@ -245,9 +243,7 @@ class TrainingLogger:
         print(f"Training curves saved to {out}")
         return out
 
-    # -----------------------------------------------------------------
     # Export helpers
-    # -----------------------------------------------------------------
 
     def export_history_json(
         self,
@@ -263,7 +259,7 @@ class TrainingLogger:
         legacy: dict[str, list] = {}
         for record in self._history:
             for key, val in record.items():
-                if key == "epoch" or isinstance(val, (list, dict)):
+                if key == "epoch" or isinstance(val, list | dict):
                     continue
                 legacy.setdefault(key, []).append(val)
 
@@ -271,9 +267,7 @@ class TrainingLogger:
             json.dump(legacy, f, indent=2)
         return out
 
-    # -----------------------------------------------------------------
     # Lifecycle
-    # -----------------------------------------------------------------
 
     def close(self) -> None:
         """Flush and close all open file handles."""
@@ -289,9 +283,7 @@ class TrainingLogger:
     def __exit__(self, *exc):
         self.close()
 
-    # -----------------------------------------------------------------
     # Internal helpers
-    # -----------------------------------------------------------------
 
     @staticmethod
     def _build_record(
@@ -304,14 +296,14 @@ class TrainingLogger:
 
         # Prefix train metrics
         for key, val_ in train.items():
-            if isinstance(val_, (list, dict)):
+            if isinstance(val_, list | dict):
                 continue  # skip batch_losses etc. for the flat record
             record[f"train_{key}"] = val_
 
         # Prefix val metrics
         if val is not None:
             for key, val_ in val.items():
-                if isinstance(val_, (list, dict)):
+                if isinstance(val_, list | dict):
                     continue
                 record[f"val_{key}"] = val_
 
@@ -342,6 +334,6 @@ class TrainingLogger:
         for key, val_ in record.items():
             if key == "epoch":
                 continue
-            if isinstance(val_, (int, float)) and val_ is not None:
+            if isinstance(val_, int | float) and val_ is not None:
                 self._tb_writer.add_scalar(key, val_, global_step=epoch)
         self._tb_writer.flush()

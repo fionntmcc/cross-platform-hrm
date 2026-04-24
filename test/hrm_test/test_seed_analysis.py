@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """Tests for hrm.training.seed_analysis — aggregation and reporting."""
 
 from __future__ import annotations
@@ -14,9 +20,7 @@ from hrm.training.seed_analysis import (
     save_summary,
 )
 
-# =========================================================================
 # Fixtures
-# =========================================================================
 
 
 def _make_history(seed: int, num_epochs: int = 10) -> dict[str, list]:
@@ -63,9 +67,7 @@ def seed_run_dir(tmp_path: Path) -> tuple[Path, list[int]]:
     return tmp_path, seeds
 
 
-# =========================================================================
 # Tests
-# =========================================================================
 
 
 class TestAggregateSeeds:

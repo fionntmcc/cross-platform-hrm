@@ -1,3 +1,11 @@
+<!--
+Project: Hierarchical Reasoning Model for Puzzle Solving
+Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+Supervisor: Dr. John Healy
+Institution: Atlantic Technological University
+Duration: 2025/2026
+-->
+
 # Cross-Platform HRM — Hierarchical Reasoning Model for Puzzle Solving
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -139,21 +147,12 @@ cross-platform-hrm/
 ├── hrm/                        # Core Python package
 │   ├── __init__.py             # Top-level exports (SimplifiedHRM, PuzzleType, ...)
 │   ├── model_simplified.py     # Simplified HRM (L-module only, 6.9M params)
-│   ├── model.py                # Full UnifiedHRM (H + L, research prototype)
-│   ├── model_simple.py         # 4×4 MLP-based prototype (historical)
 │   ├── layers/                 # Neural network building blocks
 │   │   ├── norm.py             # RMSNorm, RMSNormWithBias
 │   │   ├── transformer.py      # Attention, TransformerBlock, SwiGLU, RoPE, ReasoningModule
 │   │   ├── input_simplified.py # SimplifiedInputEmbedding (puzzle-aware)
 │   │   ├── output_simplified.py# SimplifiedOutputHead (puzzle-aware)
-│   │   ├── input.py            # InputNetwork (full HRM)
-│   │   ├── output.py           # OutputNetwork (full HRM)
-│   │   ├── planner.py          # PlannerModule (full HRM H-module)
-│   │   └── worker.py           # WorkerModule (full HRM L-module)
-│   ├── core/                   # Iteration logic
-│   │   ├── fixed_point.py      # Fixed-point iteration with residual tracking
-│   │   ├── hierarchical.py     # Outer-loop hierarchical iteration
-│   │   └── halting.py          # QHaltingHead, ACT loss, ponder cost
+│   │   └── __init__.py
 │   ├── data/                   # Dataset generation
 │   │   ├── sudoku_generator.py # Unique-solution Sudoku generator (4×4, 9×9)
 │   │   ├── weighted_maze_generator.py  # Dijkstra-labelled weighted mazes
@@ -164,6 +163,7 @@ cross-platform-hrm/
 │       ├── metrics.py          # MetricsTracker (loss, token acc, puzzle acc)
 │       ├── logger.py           # TrainingLogger (JSON output)
 │       └── seed_analysis.py    # Multi-seed aggregation
+│   └── prototype/              # Archived full-HRM research code
 ├── scripts/                    # User-facing entry points
 │   ├── train_simplified.py     # Main training script
 │   ├── run_simplified.py       # Dataset evaluation
@@ -175,20 +175,15 @@ cross-platform-hrm/
 │   ├── run_seeds.py            # Multi-seed experiment runner
 │   ├── download_model.py       # Fetch checkpoints from GitHub Releases
 │   └── publish_models.py       # Upload checkpoints to GitHub Releases
-├── tests/                      # pytest test suite
-│   ├── test_model_simplified.py
-│   ├── test_weighted_maze_generator.py
-│   ├── test_sudoku_generator.py
-│   ├── test_layers.py
-│   └── test_export_onnx.py
+├── test/                       # pytest test suite
+│   ├── hrm_test/               # Active package tests
+│   └── other/                  # Data and utility tests
 ├── .github/workflows/          # GitHub Actions
 │   └── ci.yml                  # Black, Ruff, pytest matrix
-├── model/                      # Saved checkpoints (.pt) and ONNX (.onnx)  [gitignored, downloadable]
-├── data/                       # Generated datasets (.npz, .json)          [gitignored]
-├── results/                    # Benchmark CSVs, plots                     [gitignored]
-├── notebooks/                  # Kaggle / Colab training notebooks
+├── model/                      # Saved checkpoints (.pt) and ONNX (.onnx)
+├── data/                       # Generated datasets (.npz, .json)
+├── figures/                    # Visual outputs
 ├── requirements.txt            # Core runtime dependencies
-├── requirements-dev.txt        # Development + testing dependencies
 ├── pyproject.toml              # Black, Ruff, pytest configuration
 ├── .pre-commit-config.yaml     # Pre-commit hooks
 ├── .gitignore
@@ -658,7 +653,7 @@ Requires a `GITHUB_TOKEN` environment variable with `repo` scope.
 
 ## Testing
 
-The test suite uses **pytest**. All tests live under `tests/` and cover the core package, the data generators, the layer primitives, and the ONNX export pipeline.
+The test suite uses **pytest**. All tests live under `test/` and cover the core package, data generators, and layer primitives.
 
 ```bash
 # Run the full suite
@@ -671,10 +666,10 @@ pytest --cov=hrm --cov-report=term-missing
 pytest -n auto
 
 # Single test file
-pytest tests/test_weighted_maze_generator.py -v
+pytest test/other/test_weighted_maze_generator.py -v
 
 # Single test
-pytest tests/test_model_simplified.py::test_forward_shape -v
+pytest test/hrm_test/test_simplified_hrm.py -v
 ```
 
 New contributions must include tests for any non-trivial changes and must not lower overall coverage.
@@ -766,7 +761,7 @@ python scripts/train_simplified.py --puzzle maze --generate-data --num-samples 5
 python scripts/run_simplified.py --model model/simplified_hrm_maze_best.pt --puzzle maze --data data/maze_15x15_train.npz
 python scripts/visualise_maze.py --model model/simplified_hrm_maze_best.pt --data data/maze_15x15_train.npz --index 0
 python scripts/export_onnx.py --model model/simplified_hrm_maze_best.pt --puzzle maze --maze-size 15
-python scripts/solve_onnx.py --model model/simplified_hrm_maze.onnx --puzzle maze --benchmark
+python scripts/solve_onnx.py --model model/simplified_hrm_maze_15x15.onnx --puzzle maze --benchmark
 ```
 
 ### Common troubleshooting

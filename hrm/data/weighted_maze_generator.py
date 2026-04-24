@@ -1,10 +1,15 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Weighted maze puzzle generator for HRM training.
 
 Generates grid-based weighted mazes where the task is to find the minimum-cost
 path from start to goal. Solutions are computed via Dijkstra's algorithm, producing
-optimal paths that require non-trivial search — a task well-suited to HRM's
-hierarchical reasoning capabilities.
+optimal paths that require search over multiple alternatives.
 
 Token encoding (unique integers for each cell type):
     0  = WALL      (impassable obstacle)
@@ -35,9 +40,7 @@ from typing import Any
 
 import numpy as np
 
-# =============================================================================
 # Token definitions — each cell type has a unique integer ID
-# =============================================================================
 WALL = 0
 PATH = 1  # traversable, cost 1
 START = 2
@@ -92,9 +95,7 @@ class WeightedMazeGenerator:
         self.seed = seed
         self._rng = random.Random(seed)
 
-    # -----------------------------------------------------------------
     # Core maze generation
-    # -----------------------------------------------------------------
 
     def _generate_base_maze(self) -> list[list[int]]:
         """
@@ -232,9 +233,7 @@ class WeightedMazeGenerator:
 
         return start_pos, goal_pos
 
-    # -----------------------------------------------------------------
     # Pathfinding (Dijkstra)
-    # -----------------------------------------------------------------
 
     @staticmethod
     def _cell_cost(token: int) -> int:
@@ -375,9 +374,7 @@ class WeightedMazeGenerator:
             sol[r][c] = 1
         return sol
 
-    # -----------------------------------------------------------------
     # Puzzle creation
-    # -----------------------------------------------------------------
 
     def create_puzzle(
         self, max_attempts: int = 50
@@ -500,9 +497,7 @@ class WeightedMazeGenerator:
             total += max(cost, 0)
         return total
 
-    # -----------------------------------------------------------------
     # Validation
-    # -----------------------------------------------------------------
 
     def is_valid_puzzle(self, grid: list[list[int]]) -> bool:
         """
@@ -598,9 +593,7 @@ class WeightedMazeGenerator:
 
         return solution_cost == optimal_cost
 
-    # -----------------------------------------------------------------
     # Visualization (text)
-    # -----------------------------------------------------------------
 
     @staticmethod
     def print_grid(grid: list[list[int]], solution: list[list[int]] | None = None) -> str:
@@ -638,9 +631,7 @@ class WeightedMazeGenerator:
         return "\n".join(lines)
 
 
-# =========================================================================
 # Dataset generation (mirrors Sudoku generator API)
-# =========================================================================
 
 
 def generate_weighted_maze_dataset(
@@ -774,9 +765,7 @@ def save_dataset(dataset: dict[str, Any], filename_prefix: str, save_format: str
     print(f"Metadata saved to {filename_prefix}_metadata.txt")
 
 
-# =========================================================================
 # CLI
-# =========================================================================
 
 
 def parse_args() -> argparse.Namespace:

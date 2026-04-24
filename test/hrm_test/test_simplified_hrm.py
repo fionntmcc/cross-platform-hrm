@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for SimplifiedHRM (L-Module Only, Ge et al. 2025)
 
@@ -32,9 +38,7 @@ from hrm.model_simplified import (
     create_small_simplified_hrm,
 )
 
-# =============================================================================
 # Fixtures
-# =============================================================================
 
 
 @pytest.fixture
@@ -78,9 +82,7 @@ def target_9x9():
     return torch.randint(1, 10, (4, 81))
 
 
-# =============================================================================
 # Configuration
-# =============================================================================
 
 
 class TestConfig:
@@ -103,9 +105,7 @@ class TestConfig:
         assert LModuleOnlyConfig is SimplifiedHRMConfig
 
 
-# =============================================================================
 # Model initialisation
-# =============================================================================
 
 
 class TestModelInitialisation:
@@ -141,9 +141,7 @@ class TestModelInitialisation:
         assert len(model.reasoning.layers) == config.num_layers
 
 
-# =============================================================================
 # Forward pass — output dict
-# =============================================================================
 
 
 class TestForwardOutputDict:
@@ -177,9 +175,7 @@ class TestForwardOutputDict:
         assert len(out["all_step_logits"]) == config.num_reasoning_steps
 
 
-# =============================================================================
 # Output shapes
-# =============================================================================
 
 
 class TestOutputShapes:
@@ -213,9 +209,7 @@ class TestOutputShapes:
         assert preds.max() <= 9
 
 
-# =============================================================================
 # Loss computation
-# =============================================================================
 
 
 class TestLossComputation:
@@ -247,9 +241,7 @@ class TestLossComputation:
         assert out["loss"].item() > 0
 
 
-# =============================================================================
 # One-step gradient behaviour
-# =============================================================================
 
 
 class TestOneStepGradient:
@@ -271,9 +263,7 @@ class TestOneStepGradient:
             assert not step_logits.requires_grad
 
 
-# =============================================================================
 # Return intermediates
-# =============================================================================
 
 
 class TestReturnIntermediates:
@@ -294,9 +284,7 @@ class TestReturnIntermediates:
             assert sp.shape == (4, 81)
 
 
-# =============================================================================
 # Convenience helpers
-# =============================================================================
 
 
 class TestHelpers:
@@ -338,9 +326,7 @@ class TestHelpers:
         assert "L-only" in r
 
 
-# =============================================================================
 # Factory functions
-# =============================================================================
 
 
 class TestFactories:
@@ -373,9 +359,7 @@ class TestFactories:
         assert "logits" in out
 
 
-# =============================================================================
 # No NaN
-# =============================================================================
 
 
 class TestNumericalStability:

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit tests for SudokuDataset.
 
@@ -15,9 +21,7 @@ from torch.utils.data import DataLoader
 
 from hrm.data.dataset import SudokuDataset
 
-# =====================================================================
 # Fixtures
-# =====================================================================
 
 
 @pytest.fixture
@@ -46,9 +50,7 @@ def ds_nocache():
     return SudokuDataset(num_puzzles=10, grid_size=4, difficulty="easy", seed=42, cache=False)
 
 
-# =====================================================================
 # Init validation
-# =====================================================================
 
 
 class TestInit:
@@ -79,9 +81,7 @@ class TestInit:
         assert ds.difficulty is None
 
 
-# =====================================================================
-# __len__
-# =====================================================================
+# len
 
 
 class TestLen:
@@ -93,9 +93,7 @@ class TestLen:
         assert len(ds) == 1
 
 
-# =====================================================================
 # __getitem__ output format
-# =====================================================================
 
 
 class TestGetItem:
@@ -146,9 +144,7 @@ class TestGetItem:
             ds_4x4[-1]
 
 
-# =====================================================================
 # Target cell and digit ranges
-# =====================================================================
 
 
 class TestTargetRanges:
@@ -182,9 +178,7 @@ class TestTargetRanges:
             assert 0 <= s["target_digit"] < 9
 
 
-# =====================================================================
 # Difficulty
-# =====================================================================
 
 
 class TestDifficulty:
@@ -212,9 +206,7 @@ class TestDifficulty:
             ds_nocache.get_difficulty_subset("easy")
 
 
-# =====================================================================
 # Caching
-# =====================================================================
 
 
 class TestCaching:
@@ -234,9 +226,7 @@ class TestCaching:
         assert torch.equal(ds[0]["puzzle"], ds[0]["puzzle"])
 
 
-# =====================================================================
 # Reproducibility
-# =====================================================================
 
 
 class TestReproducibility:
@@ -254,9 +244,7 @@ class TestReproducibility:
         assert differ
 
 
-# =====================================================================
 # generate_batch
-# =====================================================================
 
 
 class TestGenerateBatch:
@@ -293,9 +281,7 @@ class TestGenerateBatch:
         assert b["puzzles"].shape == (4, 9, 9)
 
 
-# =====================================================================
 # DataLoader integration
-# =====================================================================
 
 
 class TestDataLoader:
@@ -311,9 +297,7 @@ class TestDataLoader:
         assert total == 20
 
 
-# =====================================================================
 # Statistics and repr
-# =====================================================================
 
 
 class TestMisc:
@@ -331,9 +315,7 @@ class TestMisc:
         assert "SudokuDataset" in r and "num_puzzles=20" in r
 
 
-# =====================================================================
 # Transform
-# =====================================================================
 
 
 class TestTransform:
@@ -347,9 +329,7 @@ class TestTransform:
         assert ds[0]["flag"] is True
 
 
-# =====================================================================
 # Solution validity
-# =====================================================================
 
 
 class TestSolutionValidity:

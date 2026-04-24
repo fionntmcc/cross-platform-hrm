@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Publish trained model artifacts to a GitHub Release.
 
@@ -37,9 +43,7 @@ MODEL_DIR = Path(__file__).parent.parent / "model"
 
 ASSET_EXTENSIONS = {".pt", ".pth", ".json"}
 
-# ---------------------------------------------------------------------------
 # GitHub API helpers
-# ---------------------------------------------------------------------------
 
 
 def _headers(token: str) -> dict:
@@ -96,9 +100,7 @@ def _upload(upload_url: str, token: str, path: Path) -> dict:
         return json.loads(resp.read())
 
 
-# ---------------------------------------------------------------------------
 # Git helpers
-# ---------------------------------------------------------------------------
 
 
 def run_git(*args: str, cwd: Path) -> str:
@@ -109,9 +111,7 @@ def run_git(*args: str, cwd: Path) -> str:
     return r.stdout.strip()
 
 
-# ---------------------------------------------------------------------------
 # Release logic
-# ---------------------------------------------------------------------------
 
 
 def wait_for_draft_release(tag: str, token: str, timeout: int = 90) -> dict:
@@ -189,9 +189,7 @@ def main() -> None:
 
     root = Path(__file__).parent.parent
 
-    # ------------------------------------------------------------------
     # 1. Collect model files
-    # ------------------------------------------------------------------
     model_files = sorted(
         f for f in MODEL_DIR.iterdir() if f.suffix in ASSET_EXTENSIONS
     )
@@ -208,9 +206,7 @@ def main() -> None:
         print(f"  {f.name} ({f.stat().st_size / 1_048_576:.1f} MB)")
     print()
 
-    # ------------------------------------------------------------------
     # 2. Create + push annotated git tag
-    # ------------------------------------------------------------------
     if not args.skip_tag:
         msg = args.message or (
             f"Model release {args.tag}\n\n"
@@ -237,18 +233,14 @@ def main() -> None:
         print(f"  python {__file__} --tag {args.tag} --skip-tag")
         return
 
-    # ------------------------------------------------------------------
     # 3. Wait for the workflow to create the draft release
-    # ------------------------------------------------------------------
     release = wait_for_draft_release(args.tag, token)
     release_id = release["id"]
     upload_url = release["upload_url"]
     print(f"Release URL: {release['html_url']}")
     print()
 
-    # ------------------------------------------------------------------
     # 4. Upload model files
-    # ------------------------------------------------------------------
     print("Uploading assets ...")
     for f in model_files:
         size_mb = f.stat().st_size / 1_048_576
@@ -261,9 +253,7 @@ def main() -> None:
             print(f"FAILED ({e.code}): {body}", file=sys.stderr)
             sys.exit(1)
 
-    # ------------------------------------------------------------------
     # 5. Publish (undraft) the release
-    # ------------------------------------------------------------------
     print("\nPublishing release ...")
     updated = _patch(f"{API_BASE}/releases/{release_id}", token, {"draft": False})
     print(f"Published: {updated['html_url']}")

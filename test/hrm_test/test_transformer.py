@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Unit Tests for Transformer Components (Simplified HRM)
 
@@ -22,9 +28,7 @@ from hrm.layers.transformer import (
     trunc_normal_init_,
 )
 
-# =============================================================================
 # Shared constants
-# =============================================================================
 
 HIDDEN = 64  # Small hidden dim for fast tests
 N_HEADS = 4
@@ -33,9 +37,7 @@ SEQ_LEN = 16
 BATCH = 4
 
 
-# =============================================================================
 # RotaryEmbedding
-# =============================================================================
 
 
 class TestRotaryEmbedding:
@@ -75,9 +77,7 @@ class TestRotaryEmbedding:
         assert not torch.isnan(sin).any()
 
 
-# =============================================================================
 # SwiGLU
-# =============================================================================
 
 
 class TestSwiGLU:
@@ -114,9 +114,7 @@ class TestSwiGLU:
         assert hasattr(mlp, "down_proj")
 
 
-# =============================================================================
 # Attention
-# =============================================================================
 
 
 class TestAttention:
@@ -159,9 +157,7 @@ class TestAttention:
         assert x.grad is not None
 
 
-# =============================================================================
 # TransformerBlock
-# =============================================================================
 
 
 class TestTransformerBlock:
@@ -213,9 +209,7 @@ class TestTransformerBlock:
         assert isinstance(block.mlp, SwiGLU)
 
 
-# =============================================================================
 # ReasoningModule
-# =============================================================================
 
 
 class TestReasoningModule:
@@ -297,9 +291,7 @@ class TestReasoningModule:
         assert not torch.isnan(h).any()
 
 
-# =============================================================================
 # trunc_normal_init_
-# =============================================================================
 
 
 class TestTruncNormalInit:

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Data utilities, validators, and generators for the HRM system.
 
@@ -11,6 +17,12 @@ Includes:
 - Dataset I/O in JSON/CSV formats (io)
 """
 
+from hrm.data.io import (
+    load_dataset,
+)
+from hrm.data.io import (
+    save_dataset as save_dataset_io,
+)
 from hrm.data.sudoku_generator import (
     Difficulty,
     SudokuGenerator,
@@ -26,10 +38,6 @@ from hrm.data.validator import (
     is_valid_placement,
     is_valid_puzzle,
     is_valid_solution,
-)
-from hrm.data.io import (
-    load_dataset,
-    save_dataset as save_dataset_io,
 )
 from hrm.data.weighted_maze_generator import (
     GOAL,

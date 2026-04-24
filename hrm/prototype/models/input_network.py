@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Input Network for HRM
 
@@ -26,18 +32,18 @@ from hrm.layers.norm import RMSNorm
 class InputNetwork(nn.Module):
     """
     Input embedding network for converting Sudoku grids to hidden representations.
-    
+
     Takes a 2D grid of integer cell values and produces a single hidden vector
     that represents the entire puzzle state. This hidden representation is then
     used by the Planner (H-module) and Worker (L-module) for iterative reasoning.
-    
+
     Architecture:
         1. Embedding layer: (batch, H, W) -> (batch, H, W, embed_dim)
         2. Positional encoding: adds spatial information
         3. Flatten: (batch, H, W, embed_dim) -> (batch, H*W*embed_dim)
         4. Projection MLP: (batch, H*W*embed_dim) -> (batch, hidden_dim)
         5. Normalisation: RMSNorm for training stability
-    
+
     Args:
         vocab_size: Size of the vocabulary (number of possible cell values).
             For 4x4 Sudoku: 5 (0=empty, 1-4=digits)
@@ -47,17 +53,17 @@ class InputNetwork(nn.Module):
         hidden_dim: Dimension of the output hidden representation.
         dropout: Dropout probability. Default: 0.1
         use_positional: Whether to add positional encoding. Default: True
-    
+
     Shape:
         - Input: (batch, grid_size, grid_size) with integer values in [0, vocab_size)
         - Output: (batch, hidden_dim) embedded representation
-    
+
     Attributes:
         embedding: nn.Embedding layer for cell values
         pos_embedding: Positional embedding for grid positions
         projection: MLP that projects flattened embeddings to hidden_dim
         norm: RMSNorm layer for output normalisation
-    
+
     Example:
         >>> # 4x4 Sudoku configuration
         >>> input_net = InputNetwork(
@@ -71,7 +77,7 @@ class InputNetwork(nn.Module):
         >>> hidden.shape
         torch.Size([8, 64])
     """
-    
+
     def __init__(
         self,
         vocab_size: int,
@@ -83,7 +89,7 @@ class InputNetwork(nn.Module):
     ):
         """
         Initialise InputNetwork.
-        
+
         Args:
             vocab_size: Number of possible cell values (e.g., 5 for 4x4 Sudoku).
             grid_size: Size of the square grid (e.g., 4 for 4x4 Sudoku).
@@ -93,7 +99,7 @@ class InputNetwork(nn.Module):
             use_positional: Whether to use positional encoding.
         """
         super().__init__()
-        
+
         # Validate inputs
         if vocab_size <= 0:
             raise ValueError(f"vocab_size must be positive, got {vocab_size}")
@@ -105,7 +111,7 @@ class InputNetwork(nn.Module):
             raise ValueError(f"hidden_dim must be positive, got {hidden_dim}")
         if not 0 <= dropout < 1:
             raise ValueError(f"dropout must be in [0, 1), got {dropout}")
-        
+
         # Store configuration
         self.vocab_size = vocab_size
         self.grid_size = grid_size
@@ -113,13 +119,13 @@ class InputNetwork(nn.Module):
         self.hidden_dim = hidden_dim
         self.use_positional = use_positional
         self.num_cells = grid_size * grid_size
-        
+
         # Cell value embedding
         self.embedding = nn.Embedding(
             num_embeddings=vocab_size,
             embedding_dim=embed_dim,
         )
-        
+
         # Positional encoding for grid positions
         if use_positional:
             self.pos_embedding = nn.Embedding(
@@ -127,17 +133,14 @@ class InputNetwork(nn.Module):
                 embedding_dim=embed_dim,
             )
             # Register position indices as buffer (not a parameter)
-            self.register_buffer(
-                'position_ids',
-                torch.arange(self.num_cells)
-            )
+            self.register_buffer("position_ids", torch.arange(self.num_cells))
         else:
             self.pos_embedding = None
-            self.register_buffer('position_ids', None)
-        
+            self.register_buffer("position_ids", None)
+
         # Calculate flattened dimension
         flat_dim = self.num_cells * embed_dim
-        
+
         # Projection MLP: flat_dim -> hidden_dim
         # Two-layer MLP with GELU activation for expressiveness
         self.projection = nn.Sequential(
@@ -146,91 +149,91 @@ class InputNetwork(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hidden_dim * 2, hidden_dim),
         )
-        
+
         # Output normalisation for training stability
         self.norm = RMSNorm(dim=hidden_dim)
-        
+
         # Dropout for regularisation
         self.dropout = nn.Dropout(dropout)
-        
+
         # Initialise weights
         self._init_weights()
-    
+
     def _init_weights(self) -> None:
         """Initialise weights using Xavier/Glorot initialisation."""
         # Embedding initialisation
         nn.init.normal_(self.embedding.weight, mean=0.0, std=0.02)
-        
+
         if self.pos_embedding is not None:
             nn.init.normal_(self.pos_embedding.weight, mean=0.0, std=0.02)
-        
+
         # Linear layer initialisation
         for module in self.projection:
             if isinstance(module, nn.Linear):
                 nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
                     nn.init.zeros_(module.bias)
-    
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Convert Sudoku grid to hidden representation.
-        
+
         Args:
             x: Input tensor of shape (batch, grid_size, grid_size) containing
                integer cell values in range [0, vocab_size).
-        
+
         Returns:
             Hidden representation of shape (batch, hidden_dim).
-        
+
         Raises:
             ValueError: If input shape doesn't match expected grid_size.
         """
         batch_size = x.shape[0]
-        
+
         # Validate input shape
         if x.shape[1:] != (self.grid_size, self.grid_size):
             raise ValueError(
                 f"Expected input shape (batch, {self.grid_size}, {self.grid_size}), "
                 f"got {x.shape}"
             )
-        
+
         # Flatten grid to sequence: (batch, H, W) -> (batch, H*W)
         x_flat = x.view(batch_size, self.num_cells)
-        
+
         # Embed cell values: (batch, num_cells) -> (batch, num_cells, embed_dim)
         embeddings = self.embedding(x_flat)
-        
+
         # Add positional encoding if enabled
         if self.use_positional and self.pos_embedding is not None:
             # position_ids: (num_cells,) -> broadcast to (batch, num_cells, embed_dim)
             pos_emb = self.pos_embedding(self.position_ids)
             embeddings = embeddings + pos_emb
-        
+
         # Apply dropout to embeddings
         embeddings = self.dropout(embeddings)
-        
+
         # Flatten all embeddings: (batch, num_cells, embed_dim) -> (batch, num_cells*embed_dim)
         flat_embeddings = embeddings.view(batch_size, -1)
-        
+
         # Project to hidden dimension: (batch, flat_dim) -> (batch, hidden_dim)
         hidden = self.projection(flat_embeddings)
-        
+
         # Apply normalisation
         hidden = self.norm(hidden)
-        
+
         return hidden
-    
+
     def get_embedding_weights(self) -> torch.Tensor:
         """
         Get the embedding weight matrix.
-        
+
         Useful for analysis and visualisation of learned representations.
-        
+
         Returns:
             Embedding weight tensor of shape (vocab_size, embed_dim).
         """
         return self.embedding.weight.data
-    
+
     def extra_repr(self) -> str:
         """Return a string representation of module parameters."""
         return (
@@ -243,25 +246,21 @@ class InputNetwork(nn.Module):
 
 
 def create_input_network(
-    vocab_size: int,
-    grid_size: int,
-    embed_dim: int,
-    hidden_dim: int,
-    **kwargs
+    vocab_size: int, grid_size: int, embed_dim: int, hidden_dim: int, **kwargs
 ) -> InputNetwork:
     """
     Factory function to create InputNetwork.
-    
+
     Args:
         vocab_size: Size of the vocabulary.
         grid_size: Size of the Sudoku grid.
         embed_dim: Embedding dimension per cell.
         hidden_dim: Output hidden dimension.
         **kwargs: Additional arguments (dropout, use_positional).
-    
+
     Returns:
         Configured InputNetwork module.
-    
+
     Example:
         >>> net = create_input_network(
         ...     vocab_size=5,
@@ -275,25 +274,25 @@ def create_input_network(
         grid_size=grid_size,
         embed_dim=embed_dim,
         hidden_dim=hidden_dim,
-        **kwargs
+        **kwargs,
     )
 
 
 class InputNetworkTransformer(nn.Module):
     """
     Transformer-style input network (Sapient-compatible).
-    
+
     Converts sequence of tokens to hidden representations suitable for
     transformer-based processing. Unlike the MLP-based InputNetwork, this
     preserves the sequence structure for attention-based reasoning.
-    
+
     Key differences from MLP InputNetwork:
     - Input: sequence (batch, seq_len) instead of 2D grid
     - Output: per-token hidden states (batch, seq_len, hidden_size)
     - No flattening - preserves sequence for attention
     - Optional puzzle type embedding for multi-task learning
     - Position encoding handled externally via RoPE
-    
+
     Args:
         vocab_size: Size of the token vocabulary.
             For Sudoku: 10 (0=empty, 1-9=digits)
@@ -302,12 +301,12 @@ class InputNetworkTransformer(nn.Module):
         num_puzzles: Number of puzzle types for embedding. Default: 1
         use_puzzle_embedding: Whether to add puzzle type embedding. Default: False
         dtype: Data type for computations. Default: torch.bfloat16
-    
+
     Shape:
         - Input x: (batch, seq_len) integer tokens
         - Input puzzle_ids: (batch,) optional puzzle type indices
         - Output: (batch, seq_len, hidden_size) hidden states
-    
+
     Example:
         >>> input_net = InputNetworkTransformer(
         ...     vocab_size=10,
@@ -318,7 +317,7 @@ class InputNetworkTransformer(nn.Module):
         >>> hidden.shape
         torch.Size([8, 81, 256])
     """
-    
+
     def __init__(
         self,
         vocab_size: int,
@@ -328,28 +327,28 @@ class InputNetworkTransformer(nn.Module):
         dtype: torch.dtype = torch.bfloat16,
     ):
         super().__init__()
-        
+
         from hrm.layers.transformer import CastedEmbedding, CastedLinear, trunc_normal_init_
-        
+
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_puzzles = num_puzzles
         self.use_puzzle_embedding = use_puzzle_embedding
         self.dtype = dtype
-        
+
         # Token embedding (cast to dtype)
         self.tok_emb = CastedEmbedding(vocab_size, hidden_size, dtype=dtype)
-        
+
         # Optional puzzle type embedding for multi-task learning
         if use_puzzle_embedding and num_puzzles > 1:
             self.puzzle_emb = CastedEmbedding(num_puzzles, hidden_size, dtype=dtype)
         else:
             self.puzzle_emb = None
-        
+
         # Input projection: vocab embedding -> hidden_size
         # Sapient uses this to project combined embeddings
         self.input_proj = CastedLinear(hidden_size, hidden_size, dtype=dtype)
-        
+
         # Initialise with truncated normal
         trunc_normal_init_(self.tok_emb.weight, std=0.02)
         if self.puzzle_emb is not None:
@@ -357,7 +356,7 @@ class InputNetworkTransformer(nn.Module):
         trunc_normal_init_(self.input_proj.weight, std=0.02)
         if self.input_proj.bias is not None:
             nn.init.zeros_(self.input_proj.bias)
-    
+
     def forward(
         self,
         x: torch.Tensor,
@@ -365,29 +364,29 @@ class InputNetworkTransformer(nn.Module):
     ) -> torch.Tensor:
         """
         Convert token sequence to hidden representations.
-        
+
         Args:
             x: Input tokens of shape (batch, seq_len) with values in [0, vocab_size).
             puzzle_ids: Optional puzzle type indices of shape (batch,) for
                 multi-task scenarios (e.g., different Sudoku sizes or mazes).
-        
+
         Returns:
             Hidden states of shape (batch, seq_len, hidden_size).
         """
         # Token embedding: (batch, seq_len) -> (batch, seq_len, hidden_size)
         h = self.tok_emb(x)
-        
+
         # Add puzzle type embedding if enabled
         if self.puzzle_emb is not None and puzzle_ids is not None:
             # puzzle_ids: (batch,) -> (batch, 1, hidden_size) -> broadcast
             puzzle_embed = self.puzzle_emb(puzzle_ids).unsqueeze(1)
             h = h + puzzle_embed
-        
+
         # Project to hidden space
         h = self.input_proj(h)
-        
+
         return h
-    
+
     def extra_repr(self) -> str:
         return (
             f"vocab_size={self.vocab_size}, hidden_size={self.hidden_size}, "

@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Training Script for Simplified HRM (L-Module Only)
 
@@ -66,9 +72,7 @@ from hrm.model_simplified import (
 from hrm.training.logger import TrainingLogger
 from hrm.training.metrics import MetricsTracker
 
-# =============================================================================
 # Dataset Classes
-# =============================================================================
 
 class SudokuDataset(Dataset):
     """Dataset for Sudoku puzzles (4x4 or 9x9)."""
@@ -153,9 +157,7 @@ def collate_fn(batch: list[dict]) -> dict[str, torch.Tensor]:
     return result
 
 
-# =============================================================================
 # Data Loading Functions
-# =============================================================================
 
 def load_sudoku_data(
     data_path: str,
@@ -314,9 +316,7 @@ def generate_maze_data(
     return problems, solutions
 
 
-# =============================================================================
 # Training Functions
-# =============================================================================
 
 def compute_masked_loss(
     logits: torch.Tensor,
@@ -561,7 +561,7 @@ def train(
         eta_min=lr * 0.1,
     )
 
-    # ---- Structured logger (JSON, CSV, TensorBoard, plots) ----
+    # Structured logger (JSON, CSV, TensorBoard, plots)
     logger = TrainingLogger(
         log_dir=save_dir,
         run_name=f"simplified_{puzzle_name}",
@@ -647,7 +647,7 @@ def train(
                     print(f"\nEarly stopping at epoch {epoch} (no improvement for {patience} epochs)")
                     break
 
-        # ---- Log epoch to all sinks ----
+        # Log epoch to all sinks
         logger.log_epoch(epoch, train_metrics, val_metrics)
 
         scheduler.step()
@@ -674,9 +674,7 @@ def train(
     return history
 
 
-# =============================================================================
 # Main
-# =============================================================================
 
 def main():
     parser = argparse.ArgumentParser(

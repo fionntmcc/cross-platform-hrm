@@ -1,3 +1,9 @@
+# Project: Hierarchical Reasoning Model for Puzzle Solving
+# Authors: Kyrylo Kozlovskyi (G00425385), Fionn McCarthy (G00414386)
+# Supervisor: Dr. John Healy
+# Institution: Atlantic Technological University
+# Duration: 2025/2026
+
 """
 Sudoku Validation Utilities
 
@@ -6,14 +12,6 @@ Supports both 4x4 (development) and 9x9 (production) grid sizes.
 
 Used by the training pipeline to verify generated puzzles and to
 evaluate model predictions against ground-truth solutions.
-
-Authors:
-    - Kyrylo Kozlovskyi (G00425385)
-    - Fionn McCarthy (G00414386)
-
-Reference:
-    - HRM_4x4_Simple (model_simple.py): L-Module Only Variant
-    - SudokuGenerator (sudoku_generator.py): Puzzle generation
 """
 
 import math
@@ -21,9 +19,7 @@ from typing import Union
 
 import numpy as np
 
-# ---------------------------------------------------------------------------
 # Supported grid sizes and their box dimensions
-# ---------------------------------------------------------------------------
 SUPPORTED_SIZES = {4, 9}
 
 
@@ -65,9 +61,7 @@ def _validate_grid_input(
     return grid, grid_size, box_size
 
 
-# ---------------------------------------------------------------------------
 # Core validation helpers
-# ---------------------------------------------------------------------------
 
 
 def is_valid_placement(
@@ -111,7 +105,7 @@ def is_valid_placement(
     """
     grid, grid_size, box_size = _validate_grid_input(grid)
 
-    # --- bounds / range checks ---
+    # bounds / range checks
     if not (0 <= row < grid_size):
         raise ValueError(f"row must be in [0, {grid_size}), got {row}")
     if not (0 <= col < grid_size):
@@ -119,17 +113,17 @@ def is_valid_placement(
     if not (1 <= num <= grid_size):
         raise ValueError(f"num must be in [1, {grid_size}], got {num}")
 
-    # --- row constraint ---
+    # row constraint
     for c in range(grid_size):
         if c != col and grid[row, c] == num:
             return False
 
-    # --- column constraint ---
+    # column constraint
     for r in range(grid_size):
         if r != row and grid[r, col] == num:
             return False
 
-    # --- box constraint ---
+    # box constraint
     box_row_start = (row // box_size) * box_size
     box_col_start = (col // box_size) * box_size
     for r in range(box_row_start, box_row_start + box_size):
@@ -232,9 +226,7 @@ def get_empty_cells(
     return empty
 
 
-# ---------------------------------------------------------------------------
 # Extended utilities (useful for training & evaluation)
-# ---------------------------------------------------------------------------
 
 
 def is_valid_puzzle(

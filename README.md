@@ -103,7 +103,7 @@ cross-platform-hrm/
 
 ## Install
 
-Needs Python 3.10, 3.11, 3.12, or 3.13. Training is a lot faster with a CUDA GPU — our reference runs used an RTX 3060 6 GB. Inference is CPU-only either way.
+Needs Python 3.10, 3.11, 3.12, or 3.13. Training is a lot faster with a CUDA GPU — our reference runs used an NVIDIA GPU. Inference is CPU-only either way.
 
 ```bash
 git clone https://github.com/fionntmcc/cross-platform-hrm.git

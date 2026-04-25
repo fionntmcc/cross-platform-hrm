@@ -14,16 +14,24 @@ version = "0.1.0"
 description = "Cross-Platform Hierarchical Reasoning Model for constraint-satisfaction problems"
 requires-python = ">=3.10"
 dependencies = [
+    # Core ML stack
     "torch>=2.0.0",
     "numpy>=1.24.0",
     "tqdm>=4.65.0",
+    # ONNX export + inference (used by scripts/export_onnx.py and scripts/solve_onnx.py)
+    # onnxscript is required by PyTorch's dynamo exporter (opset 18)
+    "onnx>=1.15.0",
+    "onnxruntime>=1.17.0",
+    "onnxscript>=0.1.0",
 ]
 
 [project.optional-dependencies]
+# Plotting and TensorBoard logging (training curves, seed comparisons)
 viz = [
     "matplotlib>=3.7.0",
     "tensorboard>=2.14.0",
 ]
+# Full development environment: viz + tests + linters + pre-commit
 dev = [
     "black>=24.10.0",
     "ruff>=0.8.6",
@@ -32,6 +40,13 @@ dev = [
     "pytest-cov>=5.0",
     "matplotlib>=3.7.0",
     "tensorboard>=2.14.0",
+]
+# Edge / inference-only environments (Raspberry Pi, embedded).
+# Listed for reference — install directly without this package:
+#   pip install numpy onnxruntime
+edge = [
+    "numpy>=1.24.0",
+    "onnxruntime>=1.17.0",
 ]
 
 [tool.setuptools.packages.find]

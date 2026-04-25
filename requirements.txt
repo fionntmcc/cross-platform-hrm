@@ -7,10 +7,20 @@
 # Generated from pyproject.toml. Prefer editing dependencies there.
 # Regenerate with pip-compile pyproject.toml -o requirements.txt.
 
-# Core dependencies
+# Core ML stack
 torch>=2.0.0
 numpy>=1.24.0
 tqdm>=4.65.0
+
+# ONNX export and inference (scripts/export_onnx.py, scripts/solve_onnx.py)
+# onnxscript is required by PyTorch's dynamo exporter (opset 18)
+onnx>=1.15.0
+onnxruntime>=1.17.0
+onnxscript>=0.1.0
+
+# Visualisation and logging (training curves, seed comparisons, TensorBoard)
+matplotlib>=3.7.0
+tensorboard>=2.14.0
 
 # Dev and CI dependencies (install with: pip install -e .[dev])
 # black>=24.10.0
@@ -18,3 +28,7 @@ tqdm>=4.65.0
 # pre-commit>=3.7.0
 # pytest>=7.0
 # pytest-cov>=5.0
+
+# Edge / inference-only environments (Raspberry Pi, embedded):
+# install directly without this file:
+#   pip install numpy onnxruntime

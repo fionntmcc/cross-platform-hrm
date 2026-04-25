@@ -82,6 +82,27 @@ def _patch(url: str, token: str, body: dict) -> dict:
         return json.loads(resp.read())
 
 
+def _get_release_by_tag(tag: str, token: str) -> dict | None:
+    """Return release for a tag, or None if it does not exist."""
+    try:
+        return _get(f"{API_BASE}/releases/tags/{tag}", token)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+
+
+def _create_draft_release(tag: str, token: str, notes: str) -> dict:
+    """Create a draft release for an existing tag."""
+    body = {
+        "tag_name": tag,
+        "name": f"Model Release {tag}",
+        "body": notes,
+        "draft": True,
+    }
+    return _post(f"{API_BASE}/releases", token, body)
+
+
 def _upload(upload_url: str, token: str, path: Path) -> dict:
     """Upload a single file to the GitHub release upload endpoint."""
     # upload_url looks like: https://uploads.github.com/repos/.../releases/123/assets{?name,label}
@@ -202,21 +223,21 @@ def main() -> None:
         print(f"  {f.name} ({f.stat().st_size / 1_048_576:.1f} MB)")
     print()
 
+    release_notes = args.message or (
+        f"Model release {args.tag}\n\n"
+        "Contains trained SimplifiedHRM (L-Module Only) checkpoints:\n"
+        + "\n".join(f"  - {f.name}" for f in model_files)
+    )
+
     # 2. Create + push annotated git tag
     if not args.skip_tag:
-        msg = args.message or (
-            f"Model release {args.tag}\n\n"
-            "Contains trained SimplifiedHRM (L-Module Only) checkpoints:\n"
-            + "\n".join(f"  - {f.name}" for f in model_files)
-        )
-
         # Check tag doesn't already exist
         existing = run_git("tag", "-l", args.tag, cwd=root)
         if existing:
             print(f"Tag {args.tag} already exists locally — skipping tag creation.")
         else:
             print(f"Creating annotated tag {args.tag} ...")
-            run_git("tag", "-a", args.tag, "-m", msg, cwd=root)
+            run_git("tag", "-a", args.tag, "-m", release_notes, cwd=root)
 
         print(f"Pushing tag {args.tag} to origin ...")
         run_git("push", "origin", args.tag, cwd=root)
@@ -225,12 +246,29 @@ def main() -> None:
         print("Skipping tag creation (--skip-tag).")
 
     if args.dry_run:
-        print("\nDry run complete — tag pushed. Upload models when ready:")
-        print(f"  python {__file__} --tag {args.tag} --skip-tag")
+        print("\nDry run complete — no upload performed.")
+        if args.skip_tag:
+            print(f"  python {__file__} --tag {args.tag} --skip-tag")
+        else:
+            print(f"  python {__file__} --tag {args.tag} --skip-tag")
         return
 
-    # 3. Wait for the workflow to create the draft release
-    release = wait_for_draft_release(args.tag, token)
+    # 3. Resolve the release shell that assets will be attached to.
+    # If --skip-tag is used, do not wait for Actions; use an existing release
+    # immediately or create the draft release directly.
+    if args.skip_tag:
+        release = _get_release_by_tag(args.tag, token)
+        if release is None:
+            print(f"No release found for {args.tag}. Creating draft release directly ...")
+            try:
+                release = _create_draft_release(args.tag, token, release_notes)
+            except urllib.error.HTTPError as e:
+                body = e.read().decode(errors="replace")
+                print(f"Failed to create draft release ({e.code}): {body}", file=sys.stderr)
+                sys.exit(1)
+    else:
+        release = wait_for_draft_release(args.tag, token)
+
     release_id = release["id"]
     upload_url = release["upload_url"]
     print(f"Release URL: {release['html_url']}")

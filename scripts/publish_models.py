@@ -41,8 +41,6 @@ REPO = "fionntmcc/cross-platform-hrm"
 API_BASE = f"https://api.github.com/repos/{REPO}"
 MODEL_DIR = Path(__file__).parent.parent / "model"
 
-ASSET_EXTENSIONS = {".pt", ".pth", ".json"}
-
 # GitHub API helpers
 
 
@@ -189,10 +187,8 @@ def main() -> None:
 
     root = Path(__file__).parent.parent
 
-    # 1. Collect model files
-    model_files = sorted(
-        f for f in MODEL_DIR.iterdir() if f.suffix in ASSET_EXTENSIONS
-    )
+    # 1. Collect all files currently present in model/
+    model_files = sorted(f for f in MODEL_DIR.iterdir() if f.is_file())
     if args.puzzle:
         model_files = [f for f in model_files if args.puzzle in f.name]
 

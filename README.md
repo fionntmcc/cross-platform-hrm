@@ -60,6 +60,8 @@ Beyond the model itself, the project includes:
 
 ![Benchmark results](docs/benchmark_results.png)
 
+Full tables, multi-seed variance, ablations, and the Raspberry Pi 5 benchmarks are in the dissertations.
+
 ---
 
 ## Setup
@@ -101,10 +103,22 @@ Then place the files in the correct directories at the repository root:
 - `.pt`, `.onnx`, `.onnx.data` files → `model/`
 - `.npz` dataset files → `data/`
 
+**Linux / macOS:**
+
 ```bash
 mkdir -p model data
 mv *.pt *.onnx *.onnx.data model/
 mv *.npz data/
+```
+
+**Windows (PowerShell):**
+
+```powershell
+mkdir model, data
+move *.pt model\
+move *.onnx model\
+move *.onnx.data model\
+move *.npz data\
 ```
 
 You should now have:
@@ -180,10 +194,22 @@ gh release download v1.0.0 --dir . --repo fionntmcc/cross-platform-hrm
 
 Then place the files in the correct directories:
 
+**Linux / macOS:**
+
 ```bash
 mkdir -p model data
 mv *.pt *.onnx *.onnx.data model/
 mv *.npz data/
+```
+
+**Windows (PowerShell):**
+
+```powershell
+mkdir model, data
+move *.pt model\
+move *.onnx model\
+move *.onnx.data model\
+move *.npz data\
 ```
 
 ### 3. Run the demo
@@ -191,45 +217,34 @@ mv *.npz data/
 #### PyTorch evaluation (requires full install)
 
 ```bash
-# Sudoku 4x4
 python scripts/run_simplified.py --model model/simplified_hrm_sudoku_4x4.pt --puzzle sudoku_4x4 --data data/sudoku_4x4_eval.npz
 
-# Sudoku 9x9
 python scripts/run_simplified.py --model model/simplified_hrm_sudoku_9x9.pt --puzzle sudoku_9x9 --data data/sudoku_9x9_eval.npz
 
-# Maze 11x11
 python scripts/run_simplified.py --model model/simplified_hrm_maze_11x11.pt --puzzle maze --data data/maze_11x11_unseen.npz
 
-# Maze 15x15
 python scripts/run_simplified.py --model model/simplified_hrm_maze_15x15.pt --puzzle maze --data data/maze_15x15_unseen.npz
 ```
 
 #### ONNX evaluation (no PyTorch needed)
 
 ```bash
-# Sudoku 4x4
 python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_4x4.onnx --puzzle sudoku_4x4 --data data/sudoku_4x4_eval.npz
 
-# Sudoku 9x9
 python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --data data/sudoku_9x9_eval.npz
 
-# Maze 11x11
 python scripts/solve_onnx.py --model model/simplified_hrm_maze_11x11.onnx --puzzle maze --maze-size 11 --data data/maze_11x11_unseen.npz
 
-# Maze 15x15
 python scripts/solve_onnx.py --model model/simplified_hrm_maze_15x15.onnx --puzzle maze --maze-size 15 --data data/maze_15x15_unseen.npz
 ```
 
 #### Maze visualiser (publication-quality figures)
 
 ```bash
-# 11x11 mazes — predicted vs ground-truth path overlay
 python scripts/visualise_maze.py --model model/simplified_hrm_maze_11x11.pt --data data/maze_11x11_unseen.npz --num 5 --save-dir figures/maze_11x11 --show
 
-# 15x15 mazes
 python scripts/visualise_maze.py --model model/simplified_hrm_maze_15x15.pt --data data/maze_15x15_unseen.npz --num 5 --save-dir figures/maze_15x15 --show
 
-# Step-by-step reasoning replay for a single maze
 python scripts/visualise_maze.py --model model/simplified_hrm_maze_11x11.pt --data data/maze_11x11_unseen.npz --steps --index 0 --save-dir figures/maze_11x11_steps --show
 ```
 
@@ -239,22 +254,15 @@ python scripts/visualise_maze.py --model model/simplified_hrm_maze_11x11.pt --da
 python scripts/visualise_simplified.py --model model/simplified_hrm_sudoku_9x9.pt --puzzle sudoku_9x9 --delay 0.3
 ```
 
-#### Interactive mode
-
-```bash
-# Sudoku — type 81 comma-separated values (0 = empty)
-python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --interactive
-
-# Maze — type 121 comma-separated values
-python scripts/solve_onnx.py --model model/simplified_hrm_maze_11x11.onnx --puzzle maze --maze-size 11 --interactive
-```
-
 #### Latency benchmarks
 
 ```bash
 python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_4x4.onnx --puzzle sudoku_4x4 --benchmark
+
 python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --benchmark
+
 python scripts/solve_onnx.py --model model/simplified_hrm_maze_11x11.onnx --puzzle maze --maze-size 11 --benchmark
+
 python scripts/solve_onnx.py --model model/simplified_hrm_maze_15x15.onnx --puzzle maze --maze-size 15 --benchmark
 ```
 
@@ -262,30 +270,20 @@ python scripts/solve_onnx.py --model model/simplified_hrm_maze_15x15.onnx --puzz
 
 ## Training from scratch
 
-If you want to train your own models instead of using the pre-trained ones:
-
-### Sudoku 9×9
+If you want to train your own models instead of using the pre-trained ones. Training hyperparameters match those reported in the dissertation (1,000 training examples, 200 epochs, cosine annealing, AMP):
 
 ```bash
-python scripts/train_simplified.py \
-    --puzzle sudoku_9x9 --generate-data \
-    --num-samples 10000 --difficulty mixed \
-    --epochs 150 \
-    --lr 3e-4 --weight-decay 0.1 --amp \
-    --run-name sudoku_9x9 \
-    --data-output-path data/sudoku_9x9_train.npz
-```
+# Sudoku 4x4
+python scripts/train_simplified.py --puzzle sudoku_4x4 --generate-data --num-samples 1000 --difficulty mixed --epochs 200 --batch-size 512 --lr 3e-4 --weight-decay 0.1 --amp --run-name sudoku_4x4
 
-### Maze 15×15
+# Sudoku 9x9
+python scripts/train_simplified.py --puzzle sudoku_9x9 --generate-data --num-samples 1000 --difficulty mixed --epochs 200 --batch-size 512 --lr 3e-4 --weight-decay 0.1 --amp --run-name sudoku_9x9
 
-```bash
-python scripts/train_simplified.py \
-    --puzzle maze --generate-data \
-    --maze-size 15 --num-samples 5000 \
-    --epochs 200 --batch-size 128 \
-    --lr 3e-4 --weight-decay 0.1 --amp \
-    --run-name maze_15x15 \
-    --data-output-path data/maze_15x15_train.npz
+# Maze 11x11
+python scripts/train_simplified.py --puzzle maze --generate-data --num-samples 1000 --maze-size 11 --epochs 200 --batch-size 128 --lr 3e-4 --weight-decay 0.1 --amp --run-name maze_11x11
+
+# Maze 15x15
+python scripts/train_simplified.py --puzzle maze --generate-data --num-samples 1000 --maze-size 15 --epochs 200 --batch-size 128 --lr 3e-4 --weight-decay 0.1 --amp --run-name maze_15x15
 ```
 
 Each run writes `..._best.pt`, `..._final.pt`, and `training_history_*.json` into `model/`. If you already have `.npz` training data, replace `--generate-data` with `--data-path path/to/file.npz`.
@@ -298,34 +296,18 @@ Export a trained checkpoint to ONNX and then benchmark or evaluate it with ONNX 
 
 ```bash
 # Export (requires PyTorch). Verifies against PyTorch automatically (5/5 must pass).
-python scripts/export_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.pt \
-    --puzzle sudoku_9x9
+python scripts/export_onnx.py --model model/simplified_hrm_sudoku_9x9.pt --puzzle sudoku_9x9
 
-python scripts/export_onnx.py \
-    --model model/simplified_hrm_maze_15x15.pt \
-    --puzzle maze --maze-size 15
+python scripts/export_onnx.py --model model/simplified_hrm_maze_15x15.pt --puzzle maze --maze-size 15
 
 # Run (numpy + onnxruntime only, no PyTorch)
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx \
-    --puzzle sudoku_9x9
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9
 
 # Evaluate on a dataset
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx \
-    --puzzle sudoku_9x9 \
-    --data data/sudoku_9x9_eval.npz
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --data data/sudoku_9x9_eval.npz
 
 # Latency benchmark
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx \
-    --puzzle sudoku_9x9 --benchmark
-
-# Interactive mode
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx \
-    --puzzle sudoku_9x9 --interactive
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --benchmark
 ```
 
 The default opset is 18 (not 17). PyTorch's dynamo-based exporter needs it; opset 17 fails with a down-conversion error.
@@ -344,26 +326,18 @@ sudo apt update && sudo apt install -y python3-pip python3-venv git
 python3 -m venv ~/hrm-env && source ~/hrm-env/bin/activate && pip install numpy onnxruntime
 git clone https://github.com/fionntmcc/cross-platform-hrm.git && cd cross-platform-hrm
 
-# Copy models and data from your laptop
-# scp model/*.onnx pi@<pi-ip>:~/cross-platform-hrm/model/
-# scp data/*.npz pi@<pi-ip>:~/cross-platform-hrm/data/
-
-# Or download from GitHub Releases
+# Download models and datasets from GitHub Releases
 gh release download v1.0.0 --dir . --repo fionntmcc/cross-platform-hrm
 mkdir -p model data && mv *.pt *.onnx *.onnx.data model/ && mv *.npz data/
 
+# Or copy from your laptop instead
+# scp model/*.onnx data/*.npz pi@<pi-ip>:~/cross-platform-hrm/
+
 # Benchmark
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --benchmark
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --benchmark
 
 # Evaluate
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 \
-    --data data/sudoku_9x9_eval.npz
-
-# Interactive demo
-python scripts/solve_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --interactive
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --data data/sudoku_9x9_eval.npz
 ```
 
 No PyTorch, no CUDA, no cross-compilation. ONNX Runtime picks up NEON SIMD on ARM automatically. Same weights, same outputs (verified to 5 decimal places at export time).
@@ -375,22 +349,14 @@ No PyTorch, no CUDA, no cross-compilation. ONNX Runtime picks up NEON SIMD on AR
 Everything is generated inside the environment, no downloads necessary.
 
 ```bash
-# Top-level CLI (JSON / CSV output)
-python -m hrm.data.generate_dataset sudoku \
-    --size 9 --num 10000 --difficulty mixed --seed 123 \
-    --output data/sudoku_9x9_train.json
+# Sudoku (JSON / CSV output)
+python -m hrm.data.generate_dataset sudoku --size 9 --num 10000 --difficulty mixed --seed 123 --output data/sudoku_9x9_train.json
 
-python -m hrm.data.generate_dataset maze \
-    --size 15 --num 5000 --seed 123 \
-    --output data/maze_15x15_train.json
-```
+# Maze (JSON / CSV output)
+python -m hrm.data.generate_dataset maze --size 15 --num 5000 --seed 123 --output data/maze_15x15_train.json
 
-If you'd rather have the `.npz` format that `run_simplified.py` consumes directly, use the standalone generator:
-
-```bash
-python hrm/data/sudoku_generator.py \
-    --size 9 --num 10000 --difficulty mixed --seed 123 \
-    --output data/sudoku_9x9_train
+# Sudoku (.npz format, consumed directly by run_simplified.py)
+python hrm/data/sudoku_generator.py --size 9 --num 10000 --difficulty mixed --seed 123 --output data/sudoku_9x9_train
 ```
 
 Every Sudoku puzzle is validated to have a unique solution. Mazes are paired with their shortest weighted path (Dijkstra) as a binary mask.
@@ -402,15 +368,11 @@ Every Sudoku puzzle is validated to have a unique solution. Mazes are paired wit
 For honest error bars in the dissertation:
 
 ```bash
-# Defaults to seeds 123 / 456 / 789
-python scripts/run_seeds.py \
-    --puzzle sudoku_9x9 --generate-data --num-samples 10000 --difficulty mixed \
-    --epochs 200 --batch-size 512 --lr 3e-4 --weight-decay 0.1 --amp \
-    --seed-list 123 456 789 --output-dir model/seed_experiment
+# Train across 3 seeds
+python scripts/run_seeds.py --puzzle sudoku_9x9 --generate-data --num-samples 1000 --difficulty mixed --epochs 200 --batch-size 512 --lr 3e-4 --weight-decay 0.1 --amp --seed-list 123 456 789 --output-dir model/seed_experiment
 
 # Just re-aggregate without re-training
-python scripts/run_seeds.py --puzzle sudoku_9x9 \
-    --aggregate-only --output-dir model/seed_experiment
+python scripts/run_seeds.py --puzzle sudoku_9x9 --aggregate-only --output-dir model/seed_experiment
 ```
 
 Output: `seed_summary_<puzzle>.json` and `seed_comparison_<puzzle>.png` with per-seed curves, mean ± std bands, and a variance flag that trips if any accuracy metric goes over 1.5 %.
@@ -420,9 +382,11 @@ Output: `seed_summary_<puzzle>.json` and `seed_comparison_<puzzle>.png` with per
 ## Tests
 
 ```bash
-pytest                                             # full suite, runs in seconds
-pytest --cov=hrm --cov-report=term-missing         # with coverage (80 % floor)
-pytest test/hrm_test/test_simplified_hrm.py -v     # one file
+pytest
+
+pytest --cov=hrm --cov-report=term-missing
+
+pytest test/hrm_test/test_simplified_hrm.py -v
 ```
 
 Tests live under `test/hrm_test/` (core package) and `test/other/` (data layer). CI runs the whole thing on Python 3.10 through 3.13.
@@ -435,13 +399,15 @@ Pre-commit runs Black and Ruff before every commit, matching what CI does:
 
 ```bash
 pip install pre-commit && pre-commit install
-pre-commit run --all-files   # first time, to clean up existing files
+
+pre-commit run --all-files
 ```
 
 Manual:
 
 ```bash
 black hrm/ test/hrm_test/ test/other/
+
 ruff check --fix hrm/ test/hrm_test/ test/other/
 ```
 

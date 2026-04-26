@@ -6,6 +6,7 @@
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF.svg)](https://github.com/fionntmcc/cross-platform-hrm/actions)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Project Board](https://img.shields.io/badge/Project-Board-6e40c9.svg)](https://github.com/users/fionntmcc/projects/3)
 
 A PyTorch implementation of the **Hierarchical Reasoning Model (HRM)**, a recurrent architecture that solves constraint-satisfaction puzzles by iteratively refining a hidden state rather than producing chain-of-thought text. The original HRM paper [[1]](#references) uses two coupled recurrent modules (a slow planner and a fast worker); a follow-up analysis by Ge, Liao and Poggio [[2]](#references) argues that the planner isn't actually doing much, and that a single L-module iterated to convergence reaches comparable accuracy while training ~2.4x faster. This project implements that simplified L-only variant, trains it on Sudoku and weighted mazes, and deploys the result to a Raspberry Pi 5 via ONNX Runtime.
 
@@ -17,15 +18,15 @@ This is our final year project for the B.Sc. (Hons) Computing in Software Develo
 
 ## Deliverables
 
-| | |
+| Deliverable | Location |
 |---|---|
-| Source code | (`.github/workflows/`, `docs/`, `hrm/`, `scripts/`, `test/`) |
+| Source code | `.github/workflows/`, `docs/`, `hrm/`, `scripts/`, `test/` |
 | Dissertation — Kyrylo Kozlovskyi | [`docs/KyryloKozlovskyi_G00425385_Dissertation.pdf`](docs/KyryloKozlovskyi_G00425385_Dissertation.pdf) |
 | Dissertation — Fionn McCarthy | [`docs/FionnMcCarthy_G00414386_Dissertation.pdf`](docs/FionnMcCarthy_G00414386_Dissertation.pdf) |
-| Screencast | [`docs/screencast_link.txt`](docs/screencast_link.txt) |
+| Screencast | [Watch on SharePoint](https://atlantictu-my.sharepoint.com/:v:/g/personal/g00425385_atu_ie/IQAVylnvI9IGQIxUlFOU1z4hAd8WDMdaUBjWy_AE5wyWsXo?e=KmxAbq) · also available as `screencast.mp4` via [`docs/screencast_link.txt`](docs/screencast_link.txt) and the [latest release](https://github.com/fionntmcc/cross-platform-hrm/releases/latest) |
 | Poster | [`docs/poster.pdf`](docs/poster.pdf) |
 | Command reference | [`docs/commands.md`](docs/commands.md) |
-| Pre-trained models and datasets | [GitHub Releases](https://github.com/fionntmcc/cross-platform-hrm/releases) |
+| Pre-trained models and datasets | [GitHub Releases (v1.0.0)](https://github.com/fionntmcc/cross-platform-hrm/releases/tag/v1.0.0) — download the latest release for pre-trained `.pt` and `.onnx` models, evaluation datasets, and everything needed to run the demo |
 
 ---
 
@@ -57,11 +58,19 @@ Beyond the model itself, the project includes:
 
 ## Results
 
+![Benchmark results](docs/benchmark_results.png)
+
 ---
 
 ## Setup
 
-Needs Python 3.10, 3.11, 3.12, or 3.13. Training is much faster with a CUDA GPU. Our reference runs used an NVIDIA GPU, but everything in the repo also runs on CPU. Run all commands from the repository root.
+### Prerequisites
+
+- [**Python 3.10–3.13**](https://www.python.org/downloads/) — required for all usage
+- [**Git**](https://git-scm.com/downloads) — to clone the repository
+- [**GitHub CLI (`gh`)**](https://cli.github.com/) — optional, for downloading releases and publishing models
+
+Training is much faster with a CUDA GPU. Our reference runs used an NVIDIA GPU, but everything in the repo also runs on CPU. Run all commands from the repository root.
 
 ### General setup
 
@@ -78,6 +87,32 @@ pip install -e .
 ```
 
 This installs the runtime requirements: PyTorch, numpy, ONNX export dependencies, and the `hrm` package in editable mode.
+
+### Downloading pre-trained models and datasets
+
+Download everything from the [v1.0.0 release](https://github.com/fionntmcc/cross-platform-hrm/releases/tag/v1.0.0) manually, or using the GitHub CLI:
+
+```bash
+gh release download v1.0.0 --dir . --repo fionntmcc/cross-platform-hrm
+```
+
+Then place the files in the correct directories at the repository root:
+
+- `.pt`, `.onnx`, `.onnx.data` files → `model/`
+- `.npz` dataset files → `data/`
+
+```bash
+mkdir -p model data
+mv *.pt *.onnx *.onnx.data model/
+mv *.npz data/
+```
+
+You should now have:
+
+| Directory | Files |
+|---|---|
+| `model/` | `simplified_hrm_sudoku_4x4.pt`, `simplified_hrm_sudoku_4x4.onnx`, `simplified_hrm_sudoku_9x9.pt`, `simplified_hrm_sudoku_9x9.onnx`, `simplified_hrm_maze_11x11.pt`, `simplified_hrm_maze_11x11.onnx`, `simplified_hrm_maze_15x15.pt`, `simplified_hrm_maze_15x15.onnx` (plus `.onnx.data` files) |
+| `data/` | `sudoku_4x4_eval.npz`, `sudoku_9x9_eval.npz`, `maze_11x11_unseen.npz`, `maze_15x15_unseen.npz` |
 
 ### Dev environment setup
 
@@ -122,36 +157,114 @@ No PyTorch, no CUDA, no build tools. ONNX Runtime has prebuilt aarch64 wheels so
 
 ## Quick start
 
-The quickest way to navigate the repo is:
-
-1. Generate a dataset.
-2. Train or download a model.
-3. Evaluate it on a dataset.
-4. Visualise predictions or export to ONNX.
-
-### Generate datasets
-
-#### Sudoku 9×9
+### 1. Clone and install
 
 ```bash
-python -m hrm.data.generate_dataset sudoku \
-    --size 9 --num 1000 --difficulty mixed --seed 123 \
-    --output data/sudoku_9x9_eval.json
+git clone https://github.com/fionntmcc/cross-platform-hrm.git
+cd cross-platform-hrm
+
+python -m venv .venv
+source .venv/bin/activate              # Linux / macOS
+# .\.venv\Scripts\Activate.ps1         # Windows PowerShell
+
+pip install -e .
 ```
 
-#### Maze 15×15
+### 2. Download pre-trained models and datasets
+
+Download everything from the [v1.0.0 release](https://github.com/fionntmcc/cross-platform-hrm/releases/tag/v1.0.0) manually, or using the GitHub CLI:
 
 ```bash
-python -m hrm.data.generate_dataset maze \
-    --size 15 --num 500 --seed 123 \
-    --output data/maze_15x15_eval.json
+gh release download v1.0.0 --dir . --repo fionntmcc/cross-platform-hrm
 ```
 
-Use this generator when you want portable `.json` or `.csv` datasets for evaluation, demos, or figure generation. The training script can also generate `.npz` training data inline with `--generate-data`.
+Then place the files in the correct directories:
 
-### Train models
+```bash
+mkdir -p model data
+mv *.pt *.onnx *.onnx.data model/
+mv *.npz data/
+```
 
-#### Sudoku 9×9
+### 3. Run the demo
+
+#### PyTorch evaluation (requires full install)
+
+```bash
+# Sudoku 4x4
+python scripts/run_simplified.py --model model/simplified_hrm_sudoku_4x4.pt --puzzle sudoku_4x4 --data data/sudoku_4x4_eval.npz
+
+# Sudoku 9x9
+python scripts/run_simplified.py --model model/simplified_hrm_sudoku_9x9.pt --puzzle sudoku_9x9 --data data/sudoku_9x9_eval.npz
+
+# Maze 11x11
+python scripts/run_simplified.py --model model/simplified_hrm_maze_11x11.pt --puzzle maze --data data/maze_11x11_unseen.npz
+
+# Maze 15x15
+python scripts/run_simplified.py --model model/simplified_hrm_maze_15x15.pt --puzzle maze --data data/maze_15x15_unseen.npz
+```
+
+#### ONNX evaluation (no PyTorch needed)
+
+```bash
+# Sudoku 4x4
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_4x4.onnx --puzzle sudoku_4x4 --data data/sudoku_4x4_eval.npz
+
+# Sudoku 9x9
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --data data/sudoku_9x9_eval.npz
+
+# Maze 11x11
+python scripts/solve_onnx.py --model model/simplified_hrm_maze_11x11.onnx --puzzle maze --maze-size 11 --data data/maze_11x11_unseen.npz
+
+# Maze 15x15
+python scripts/solve_onnx.py --model model/simplified_hrm_maze_15x15.onnx --puzzle maze --maze-size 15 --data data/maze_15x15_unseen.npz
+```
+
+#### Maze visualiser (publication-quality figures)
+
+```bash
+# 11x11 mazes — predicted vs ground-truth path overlay
+python scripts/visualise_maze.py --model model/simplified_hrm_maze_11x11.pt --data data/maze_11x11_unseen.npz --num 5 --save-dir figures/maze_11x11 --show
+
+# 15x15 mazes
+python scripts/visualise_maze.py --model model/simplified_hrm_maze_15x15.pt --data data/maze_15x15_unseen.npz --num 5 --save-dir figures/maze_15x15 --show
+
+# Step-by-step reasoning replay for a single maze
+python scripts/visualise_maze.py --model model/simplified_hrm_maze_11x11.pt --data data/maze_11x11_unseen.npz --steps --index 0 --save-dir figures/maze_11x11_steps --show
+```
+
+#### Step-by-step Sudoku reasoning (terminal)
+
+```bash
+python scripts/visualise_simplified.py --model model/simplified_hrm_sudoku_9x9.pt --puzzle sudoku_9x9 --delay 0.3
+```
+
+#### Interactive mode
+
+```bash
+# Sudoku — type 81 comma-separated values (0 = empty)
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --interactive
+
+# Maze — type 121 comma-separated values
+python scripts/solve_onnx.py --model model/simplified_hrm_maze_11x11.onnx --puzzle maze --maze-size 11 --interactive
+```
+
+#### Latency benchmarks
+
+```bash
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_4x4.onnx --puzzle sudoku_4x4 --benchmark
+python scripts/solve_onnx.py --model model/simplified_hrm_sudoku_9x9.onnx --puzzle sudoku_9x9 --benchmark
+python scripts/solve_onnx.py --model model/simplified_hrm_maze_11x11.onnx --puzzle maze --maze-size 11 --benchmark
+python scripts/solve_onnx.py --model model/simplified_hrm_maze_15x15.onnx --puzzle maze --maze-size 15 --benchmark
+```
+
+---
+
+## Training from scratch
+
+If you want to train your own models instead of using the pre-trained ones:
+
+### Sudoku 9×9
 
 ```bash
 python scripts/train_simplified.py \
@@ -163,7 +276,7 @@ python scripts/train_simplified.py \
     --data-output-path data/sudoku_9x9_train.npz
 ```
 
-#### Maze 15×15
+### Maze 15×15
 
 ```bash
 python scripts/train_simplified.py \
@@ -177,70 +290,6 @@ python scripts/train_simplified.py \
 
 Each run writes `..._best.pt`, `..._final.pt`, and `training_history_*.json` into `model/`. If you already have `.npz` training data, replace `--generate-data` with `--data-path path/to/file.npz`.
 
-### Or use a released model on a generated dataset
-
-Download a released checkpoint, generate a fresh dataset, then run evaluation.
-
-```bash
-python scripts/download_model.py --puzzle sudoku_9x9
-
-python -m hrm.data.generate_dataset sudoku \
-    --size 9 --num 100 --difficulty mixed --seed 123 \
-    --output data/sudoku_9x9_release_eval.json
-
-python scripts/run_simplified.py \
-    --model model/simplified_hrm_sudoku_9x9_best.pt \
-    --puzzle sudoku_9x9 \
-    --data data/sudoku_9x9_release_eval.json \
-    --eval-count 100 --num-examples 5
-```
-
-`download_model.py` can filter Sudoku release assets directly. For maze release checkpoints, run `python scripts/download_model.py` without `--puzzle`, or download the maze checkpoint from the Releases page and point the commands below at that `.pt` file.
-
-### Evaluate a maze 15×15 model on a fresh generated dataset
-
-This keeps evaluation separate from training data by generating a new file with a different seed.
-
-```bash
-python -m hrm.data.generate_dataset maze \
-    --size 15 --num 500 --seed 314 \
-    --output data/maze_15x15_eval.json
-
-python scripts/run_simplified.py \
-    --model model/simplified_hrm_maze_15x15_best.pt \
-    --puzzle maze \
-    --data data/maze_15x15_eval.json \
-    --eval-count 500 --num-examples 5
-```
-
-If you used the default maze run name instead of `--run-name maze_15x15`, replace the model path with `model/simplified_hrm_maze_best.pt`.
-
-### Maze visualiser
-
-Generate comparison figures for predicted vs ground-truth paths:
-
-```bash
-python scripts/visualise_maze.py \
-    --model model/simplified_hrm_maze_15x15_best.pt \
-    --data data/maze_15x15_eval.json \
-    --num 5 --save-dir figures/maze_15x15
-```
-
-Add `--steps --index 0` to also save a per-step reasoning figure for one selected maze.
-
-### Sudoku solution across reasoning steps
-
-Replay the iterative refinement process in the terminal:
-
-```bash
-python scripts/visualise_simplified.py \
-    --model model/simplified_hrm_sudoku_9x9_best.pt \
-    --puzzle sudoku_9x9 \
-    --delay 0.3
-```
-
-This uses the built-in sample Sudoku. To inspect a specific puzzle, pass `--input` and optionally `--target` as row-major comma-separated values.
-
 ---
 
 ## ONNX export and inference
@@ -250,11 +299,11 @@ Export a trained checkpoint to ONNX and then benchmark or evaluate it with ONNX 
 ```bash
 # Export (requires PyTorch). Verifies against PyTorch automatically (5/5 must pass).
 python scripts/export_onnx.py \
-    --model model/simplified_hrm_sudoku_9x9_best.pt \
+    --model model/simplified_hrm_sudoku_9x9.pt \
     --puzzle sudoku_9x9
 
 python scripts/export_onnx.py \
-    --model model/simplified_hrm_maze_15x15_best.pt \
+    --model model/simplified_hrm_maze_15x15.pt \
     --puzzle maze --maze-size 15
 
 # Run (numpy + onnxruntime only, no PyTorch)
@@ -300,7 +349,8 @@ git clone https://github.com/fionntmcc/cross-platform-hrm.git && cd cross-platfo
 # scp data/*.npz pi@<pi-ip>:~/cross-platform-hrm/data/
 
 # Or download from GitHub Releases
-python scripts/download_model.py --puzzle sudoku_9x9
+gh release download v1.0.0 --dir . --repo fionntmcc/cross-platform-hrm
+mkdir -p model data && mv *.pt *.onnx *.onnx.data model/ && mv *.npz data/
 
 # Benchmark
 python scripts/solve_onnx.py \

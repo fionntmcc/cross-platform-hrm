@@ -40,6 +40,14 @@ from pathlib import Path
 REPO = "fionntmcc/cross-platform-hrm"
 API_BASE = f"https://api.github.com/repos/{REPO}"
 MODEL_DIR = Path(__file__).parent.parent / "model"
+DATA_DIR = Path(__file__).parent.parent / "data"
+
+DEFAULT_DATASET_FILES = (
+    "maze_11x11_unseen.npz",
+    "maze_15x15_unseen.npz",
+    "sudoku_4x4_eval.npz",
+    "sudoku_9x9_eval.npz",
+)
 
 # GitHub API helpers
 
@@ -119,6 +127,23 @@ def _upload(upload_url: str, token: str, path: Path) -> dict:
         return json.loads(resp.read())
 
 
+def _delete_release_asset(asset_id: int, token: str) -> None:
+    req = urllib.request.Request(
+        f"{API_BASE}/releases/assets/{asset_id}",
+        headers=_headers(token),
+        method="DELETE",
+    )
+    with urllib.request.urlopen(req):
+        return
+
+
+def _find_asset_by_name(release: dict, asset_name: str) -> dict | None:
+    for asset in release.get("assets", []):
+        if asset.get("name") == asset_name:
+            return asset
+    return None
+
+
 # Git helpers
 
 
@@ -185,6 +210,16 @@ def main() -> None:
         help="Upload only models for this puzzle type.",
     )
     parser.add_argument(
+        "--include-datasets",
+        action="store_true",
+        help="Also upload four standard datasets from data/ (eval + unseen sets).",
+    )
+    parser.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help="Replace release assets with the same filename instead of skipping them.",
+    )
+    parser.add_argument(
         "--skip-tag",
         action="store_true",
         help="Skip creating/pushing the git tag (use if already pushed).",
@@ -208,25 +243,44 @@ def main() -> None:
 
     root = Path(__file__).parent.parent
 
-    # 1. Collect all files currently present in model/
+    # 1. Collect model files
     model_files = sorted(f for f in MODEL_DIR.iterdir() if f.is_file())
     if args.puzzle:
         model_files = [f for f in model_files if args.puzzle in f.name]
 
-    if not model_files:
-        print(f"No model files found in {MODEL_DIR}", file=sys.stderr)
+    dataset_files: list[Path] = []
+    if args.include_datasets:
+        dataset_files = [DATA_DIR / name for name in DEFAULT_DATASET_FILES]
+        missing_datasets = [p for p in dataset_files if not p.exists()]
+        if missing_datasets:
+            print("Missing dataset files:", file=sys.stderr)
+            for p in missing_datasets:
+                print(f"  {p}", file=sys.stderr)
+            sys.exit(1)
+
+    files_to_publish = model_files + dataset_files
+    if not files_to_publish:
+        print("No files selected for publishing.", file=sys.stderr)
         sys.exit(1)
 
-    total_mb = sum(f.stat().st_size for f in model_files) / 1_048_576
-    print(f"Files to publish ({len(model_files)}, {total_mb:.1f} MB total):")
-    for f in model_files:
+    # Guard against ambiguous uploads if two paths have the same filename.
+    seen_names: set[str] = set()
+    for file_path in files_to_publish:
+        if file_path.name in seen_names:
+            print(f"Duplicate filename selected for upload: {file_path.name}", file=sys.stderr)
+            sys.exit(1)
+        seen_names.add(file_path.name)
+
+    total_mb = sum(f.stat().st_size for f in files_to_publish) / 1_048_576
+    print(f"Files to publish ({len(files_to_publish)}, {total_mb:.1f} MB total):")
+    for f in files_to_publish:
         print(f"  {f.name} ({f.stat().st_size / 1_048_576:.1f} MB)")
     print()
 
     release_notes = args.message or (
         f"Model release {args.tag}\n\n"
-        "Contains trained SimplifiedHRM (L-Module Only) checkpoints:\n"
-        + "\n".join(f"  - {f.name}" for f in model_files)
+        "Contains release artifacts:\n"
+        + "\n".join(f"  - {f.name}" for f in files_to_publish)
     )
 
     # 2. Create + push annotated git tag
@@ -274,13 +328,32 @@ def main() -> None:
     print(f"Release URL: {release['html_url']}")
     print()
 
-    # 4. Upload model files
+    # 4. Upload files
     print("Uploading assets ...")
-    for f in model_files:
+    for f in files_to_publish:
         size_mb = f.stat().st_size / 1_048_576
         print(f"  {f.name} ({size_mb:.1f} MB) ... ", end="", flush=True)
+
+        existing = _find_asset_by_name(release, f.name)
+        if existing is not None:
+            if args.replace_existing:
+                asset_id = existing.get("id")
+                if asset_id is None:
+                    print("FAILED: existing asset has no id", file=sys.stderr)
+                    sys.exit(1)
+                try:
+                    _delete_release_asset(asset_id, token)
+                except urllib.error.HTTPError as e:
+                    body = e.read().decode(errors="replace")
+                    print(f"FAILED deleting existing asset ({e.code}): {body}", file=sys.stderr)
+                    sys.exit(1)
+            else:
+                print("already exists, skipped")
+                continue
+
         try:
-            _upload(upload_url, token, f)
+            uploaded_asset = _upload(upload_url, token, f)
+            release.setdefault("assets", []).append(uploaded_asset)
             print("done")
         except urllib.error.HTTPError as e:
             body = e.read().decode(errors="replace")
